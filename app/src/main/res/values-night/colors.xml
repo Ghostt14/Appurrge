@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#FF371B</color>
+    <color name="colorPrimaryDark">#C62B14</color>
+    <color name="rowSelected">#55FF371B</color>
+</resources>
