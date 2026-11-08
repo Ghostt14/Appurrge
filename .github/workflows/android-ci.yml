@@ -39,16 +39,15 @@ jobs:
         run: ./gradlew --no-daemon testDebugUnitTest
       - name: Android lint
         run: ./gradlew --no-daemon lintDebug
-      - name: Assemble APKs (small release + debug fallback)
-        run: ./gradlew --no-daemon assembleRelease assembleDebug
+      - name: Assemble APK
+        run: ./gradlew --no-daemon assembleRelease
       - name: Upload APK and reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: appurrge-apks-and-reports
+          name: appurrge-apk-and-reports
           if-no-files-found: warn
           path: |
             app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/debug/*.apk
             app/build/reports/lint-results-debug.html
             app/build/test-results/testDebugUnitTest/

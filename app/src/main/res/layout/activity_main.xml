@@ -8,7 +8,8 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- Top bar: search on the left, sort on the right (sort stays reachable while searching). -->
+        <!-- Top bar: [clear selection] title/search field ... [search][sort]. Search and sort sit together
+             on the right, so both work while apps are selected. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="48dp"
@@ -17,17 +18,19 @@
             android:orientation="horizontal">
 
             <ImageButton
-                android:id="@+id/btn_search"
+                android:id="@+id/btn_clear"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/search_hint"
-                android:src="@drawable/ic_search" />
+                android:contentDescription="@string/cancel"
+                android:src="@drawable/ic_close"
+                android:visibility="gone" />
 
             <FrameLayout
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1">
+                android:layout_weight="1"
+                android:paddingStart="16dp">
 
                 <TextView
                     android:id="@+id/tv_title"
@@ -57,6 +60,14 @@
                     android:theme="@style/SearchField"
                     android:visibility="gone" />
             </FrameLayout>
+
+            <ImageButton
+                android:id="@+id/btn_search"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/search_hint"
+                android:src="@drawable/ic_search" />
 
             <ImageButton
                 android:id="@+id/btn_sort"

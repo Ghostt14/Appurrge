@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Shizuku's libraries declare minSdk 23+; we still run on 21+ and just never use Shizuku below 23. -->
+    <uses-sdk tools:overrideLibrary="rikka.shizuku.api,rikka.shizuku.provider,rikka.shizuku.aidl,rikka.shizuku.shared" />
+
     <!-- List every installed app (Android 11+). -->
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
@@ -29,6 +32,7 @@
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"
+            android:enabled="@bool/shizuku_provider_enabled"
             android:exported="true"
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />

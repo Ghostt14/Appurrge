@@ -27,6 +27,7 @@
     <string name="system_needs_access">System apps need Shizuku or root</string>
     <string name="start_shizuku">Start Shizuku, then tap again</string>
     <string name="no_shizuku">Install Shizuku to remove system apps</string>
+    <string name="shizuku_android">Android 6 required</string>
     <string name="shizuku_denied">Allow Appurrge in the Shizuku app</string>
 
     <!-- Order must match SortMode in Models.kt. -->

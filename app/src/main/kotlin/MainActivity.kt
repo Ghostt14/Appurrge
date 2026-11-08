@@ -2,6 +2,7 @@
 package com.appurrge
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -31,7 +32,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val vm: AppListViewModel by viewModels()
     private lateinit var adapter: AppInfoAdapter
-    private val imm by lazy { getSystemService(InputMethodManager::class.java) }
+    private val imm by lazy { getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager }
 
     private var searchOpen = false
     private var lastScrollToken = 0
@@ -76,8 +77,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         onBackPressedDispatcher.addCallback(this, backCallback)
-        Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
-        Shizuku.addBinderReceivedListener(shizukuBinderListener)
+        if (shizukuSupported) {
+            Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
+            Shizuku.addBinderReceivedListener(shizukuBinderListener)
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -93,8 +96,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
-        Shizuku.removeBinderReceivedListener(shizukuBinderListener)
+        if (shizukuSupported) {
+            Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+            Shizuku.removeBinderReceivedListener(shizukuBinderListener)
+        }
         progressDialog?.dismiss()
         progressDialog = null
         super.onDestroy()
@@ -103,14 +108,10 @@ class MainActivity : AppCompatActivity() {
     // ---- setup ----------------------------------------------------------------------------------
 
     private fun setupTopBar() {
-        // Left button: opens search; becomes a cross that closes search, or clears the selection.
-        binding.btnSearch.setOnClickListener {
-            when {
-                searchOpen -> setSearchOpen(false)
-                vm.state.value.selectedCount > 0 -> vm.clearSelection()
-                else -> setSearchOpen(true)
-            }
-        }
+        // Right side: search (a cross while open) next to sort. Left side: a cross that appears only
+        // while apps are selected. So search and sort both stay usable with a selection.
+        binding.btnSearch.setOnClickListener { setSearchOpen(!searchOpen) }
+        binding.btnClear.setOnClickListener { vm.clearSelection() }
         binding.btnSort.setOnClickListener { showSortDialog() }
         binding.etSearch.setOnEditorActionListener { _, _, _ ->
             imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
@@ -143,9 +144,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateTopBar() {
-        val busy = searchOpen || vm.state.value.selectedCount > 0
-        backCallback.isEnabled = busy
-        binding.btnSearch.setImageResource(if (busy) R.drawable.ic_close else R.drawable.ic_search)
+        val selecting = vm.state.value.selectedCount > 0
+        backCallback.isEnabled = searchOpen || selecting
+        binding.btnClear.isVisible = selecting
+        binding.btnSearch.setImageResource(if (searchOpen) R.drawable.ic_close else R.drawable.ic_search)
     }
 
     private fun setupList() {
@@ -204,7 +206,7 @@ class MainActivity : AppCompatActivity() {
         if (!fab.isVisible) return
         val needsAccess = s.selectedSystemCount > 0 && !s.privileged
         fab.setIfChanged(
-            if (needsAccess) getString(R.string.root_access)
+            if (needsAccess) getString(if (shizukuSupported) R.string.root_access else R.string.shizuku_android)
             else getString(R.string.uninstall_fab, s.selectedCount, Formatter.formatShortFileSize(this, s.selectedBytes))
         )
         fab.setCompoundDrawablesRelativeWithIntrinsicBounds(
@@ -306,20 +308,20 @@ class MainActivity : AppCompatActivity() {
     private fun refreshShizuku() = vm.setShizukuReady(shizukuRunning() && shizukuPermitted())
 
     private fun shizukuRunning() = try {
-        Shizuku.pingBinder() && !Shizuku.isPreV11()
+        shizukuSupported && Shizuku.pingBinder() && !Shizuku.isPreV11()
     } catch (e: Throwable) {
         false
     }
 
     private fun shizukuPermitted() = try {
-        Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+        shizukuSupported && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
     } catch (e: Throwable) {
         false
     }
 
     /** False once the user chose "deny and don't ask again". */
     private fun shizukuCanAsk() = try {
-        !Shizuku.shouldShowRequestPermissionRationale()
+        shizukuSupported && !Shizuku.shouldShowRequestPermissionRationale()
     } catch (e: Throwable) {
         false
     }
@@ -329,7 +331,7 @@ class MainActivity : AppCompatActivity() {
     private fun handleEvent(event: UiEvent) {
         when (event) {
             is UiEvent.Message -> Toast.makeText(this, event.text, Toast.LENGTH_LONG).show()
-            UiEvent.OpenShizuku -> openShizuku()
+            UiEvent.OpenShizuku -> if (shizukuSupported) openShizuku() else toast(R.string.shizuku_android)
             is UiEvent.PromptUninstall -> {
                 val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:${event.packageName}"))
                     .putExtra(Intent.EXTRA_RETURN_RESULT, true)

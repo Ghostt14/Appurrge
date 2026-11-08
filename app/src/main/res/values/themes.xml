@@ -2,6 +2,9 @@
     <color name="colorPrimary">#3B9E23</color>
     <color name="rowSelected">#333B9E23</color>
 
+    <!-- Shizuku needs Android 6.0 (API 23); values-v23 turns its provider on. -->
+    <bool name="shizuku_provider_enabled">false</bool>
+
     <!-- Follows the system light/dark setting. The status bar uses the same green as the top bar. -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>

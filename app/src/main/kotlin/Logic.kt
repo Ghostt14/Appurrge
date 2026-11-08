@@ -24,7 +24,7 @@ object AppListLogic {
     fun matches(app: AppInfo, query: String): Boolean =
         app.appName.contains(query, ignoreCase = true) || app.packageName.contains(query, ignoreCase = true)
 
-    // Written by hand: Comparator.reversed()/thenComparing() are API 24+ and minSdk is 23.
+    // Written by hand: Comparator.reversed()/thenComparing() are API 24+ and minSdk is 21.
     fun comparator(sort: SortMode): Comparator<AppInfo> = Comparator { a, b ->
         val primary = when (sort) {
             SortMode.NAME_ASC -> collator.compare(a.appName, b.appName)
