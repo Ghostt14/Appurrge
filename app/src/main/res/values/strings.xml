@@ -1,64 +1,41 @@
 <resources>
-    <string name="app_name">Batch Uninstaller</string>
-
-    <!-- Main screen -->
-    <string name="search_hint">Search apps</string>
+    <string name="app_name">Appurrge</string>
+    <string name="search_hint">Search</string>
+    <string name="sort">Sort</string>
     <string name="tab_user">User (%1$d)</string>
     <string name="tab_system">System (%1$d)</string>
-    <string name="sort">Sort</string>
-    <string name="filter">Filter</string>
-    <string name="chip_sort">Sort: %1$s</string>
-    <string name="chip_filter">Filter: %1$s</string>
-    <string name="row_details">%1$s · %2$s</string>
-    <string name="empty_list">No apps to show</string>
-    <string name="load_failed">Could not load the app list</string>
     <string name="n_selected">%1$d selected</string>
-    <plurals name="apps_count">
-        <item quantity="one">%d app</item>
-        <item quantity="other">%d apps</item>
-    </plurals>
+    <string name="empty_list">No apps</string>
+    <string name="load_failed">Couldn\'t load apps</string>
 
-    <!-- Uninstall -->
     <string name="uninstall">Uninstall</string>
+    <string name="cancel">Cancel</string>
     <string name="uninstall_fab">Uninstall %1$d · %2$s</string>
+    <string name="root_access">ROOT ACCESS</string>
     <plurals name="uninstall_confirm_title">
         <item quantity="one">Uninstall %d app?</item>
         <item quantity="other">Uninstall %d apps?</item>
     </plurals>
-    <string name="uninstall_confirm_message">This frees up about %1$s.</string>
-    <string name="uninstall_system_warning">Some selected apps are system apps. Removing the wrong one can break your phone. They are removed for your user only and can be brought back later.</string>
+    <string name="uninstall_confirm_message">Frees about %1$s</string>
+    <string name="system_warning">Uninstalling system apps can break your phone, only use if you know what you are doing</string>
     <string name="uninstalling">Uninstalling…</string>
     <string name="uninstalling_item">%3$s (%1$d of %2$d)</string>
-    <string name="cancel">Cancel</string>
-    <string name="uninstall_complete">Uninstallation complete</string>
-    <string name="uninstall_summary">Uninstalled %1$d, failed %2$d</string>
-    <string name="uninstall_cancelled">Cancelled after uninstalling %1$d</string>
-    <string name="system_apps_need_privileges">%1$d system app(s) skipped. Removing system apps needs Shizuku or root.</string>
 
-    <!-- Dropdown labels. The order of these items must match SortMode / AppFilter. -->
+    <string name="uninstall_complete">Apps removed</string>
+    <string name="uninstall_summary">Removed %1$d, failed %2$d</string>
+    <string name="uninstall_cancelled">Cancelled, removed %1$d</string>
+    <string name="system_needs_access">System apps need Shizuku or root</string>
+    <string name="start_shizuku">Start Shizuku, then tap again</string>
+    <string name="no_shizuku">Install Shizuku to remove system apps</string>
+    <string name="shizuku_denied">Allow Appurrge in the Shizuku app</string>
+
+    <!-- Order must match SortMode in Models.kt. -->
     <string-array name="sort">
-        <item>Name (A to Z)</item>
-        <item>Name (Z to A)</item>
-        <item>Size (smallest first)</item>
-        <item>Size (largest first)</item>
-        <item>Install date (oldest first)</item>
-        <item>Install date (newest first)</item>
-    </string-array>
-
-    <string-array name="sort_short">
-        <item>Name A–Z</item>
-        <item>Name Z–A</item>
-        <item>Smallest</item>
-        <item>Largest</item>
-        <item>Oldest</item>
-        <item>Newest</item>
-    </string-array>
-
-    <string-array name="filter">
-        <item>Any</item>
-        <item>Over 50 MB</item>
-        <item>Over 100 MB</item>
-        <item>Installed in last 30 days</item>
-        <item>Installed over a year ago</item>
+        <item>A to Z</item>
+        <item>Z to A</item>
+        <item>Smallest First</item>
+        <item>Largest First</item>
+        <item>Oldest First</item>
+        <item>Newest First</item>
     </string-array>
 </resources>

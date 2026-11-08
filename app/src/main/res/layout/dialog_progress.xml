@@ -14,7 +14,8 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="2"
-        android:textAppearance="?attr/textAppearanceBody1" />
+        android:textColor="?android:attr/textColorPrimary"
+        android:textSize="16sp" />
 
     <ProgressBar
         android:id="@+id/progress_bar"

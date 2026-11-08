@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="colorPrimary">#FF5722</color>
-    <color name="colorPrimaryDark">#E64A19</color>
-    <!-- Tint for selected rows (drawn over the normal surface colour). -->
-    <color name="rowSelected">#33FF5722</color>
-</resources>

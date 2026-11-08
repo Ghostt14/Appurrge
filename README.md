@@ -1,44 +1,30 @@
-# Batch Uninstaller
+# Appurrge
 
-Select many apps and uninstall them in one go. No ads, no tracking.
+Select many apps and uninstall them in one go. No ads, no tracking, no bloat.
 
-This was inspired by
-[sarbajitsaha/Batch-Uninstaller](https://github.com/sarbajitsaha/Batch-Uninstaller).
+Appurrge started from the code of [Batch Uninstaller](https://github.com/sarbajitsaha/Batch-Uninstaller)
+by Sarbajit Saha and is now its own project. It stays under the same license (GPL-3.0, see `LICENSE`).
 
-## What stands out
+## Features
+- Opens fast: the last list is cached, and on a first run the newest apps appear before the rest finish loading.
+- **User / System** tabs, **search** (left of the top bar) and **sort** (right of the top bar, always reachable).
+- Draggable fast-scroll bar; its popup shows a letter, a month or a size depending on the sort.
+- Selection is kept when you refresh, search or switch tabs.
+- Silent uninstall through **Shizuku** or **root**. Without either, Android's own dialog is used (user apps only).
+- With system apps selected, the button reads **ROOT ACCESS** until Shizuku (or root) is connected.
 
-**Faster**
-- Opens straight into the list (no splash activity) and loads apps off the main thread.
-- One PackageManager query instead of four per app; icons load lazily as rows scroll into view.
+System apps are removed for your user only (`pm uninstall -k --user 0`). That is reversible with
+`cmd package install-existing <package>` and never deletes files under `/system`.
 
-**Interface**
-- **User / System tabs** instead of the filter button.
-- **Search** by app name or package name.
-- **Sort and Filter chips pinned** under the tabs, so they never scroll away.
-- **Draggable fast-scroll bar** on the right. Its popup shows a letter (sorted by name), a month
-  (sorted by date) or a size (sorted by size).
-- **Pull-to-refresh needs a longer pull**, and your selection is kept when the list refreshes.
-- Light/dark follows the system. The three-dot menu (night mode, profiles, about, rate, feedback) is gone.
-
-**Uninstalling**, in order of preference:
-1. **Shizuku**: silent uninstall of user *and* system apps, no root needed.
-2. **Root** (`su`): same, silent.
-3. **Android's own dialog**, one app at a time (user apps only).
-
-System apps are removed **for your user only** (`pm uninstall -k --user 0`). That is reversible
-(`cmd package install-existing <package>`) and cannot leave the phone unbootable. The old root code
-that also deleted files under `/system` has been removed.
-
-## Building
-JDK 17 and the Android SDK (platform 33). Then:
+## Build
+JDK 17 and the Android SDK (platform 33):
 
 ```
-./gradlew testDebugUnitTest assembleDebug
+./gradlew testDebugUnitTest assembleRelease
 ```
 
+The GitHub Actions workflow does this on every push and uploads two APKs: the small release build and a debug
+build as a fallback. The release APK is signed with the debug key so it can be installed; it is not meant for a store.
 
-Minimum Android version is 6.0 (required by Shizuku).
-
-## License
-Uses [Shizuku-API](https://github.com/RikkaApps/Shizuku-API) and
-[AndroidFastScroll](https://github.com/zhanghai/AndroidFastScroll) (both Apache-2.0).
+Android 6.0+ (needed by Shizuku). Uses [Shizuku-API](https://github.com/RikkaApps/Shizuku-API) and
+[AndroidFastScroll](https://github.com/zhanghai/AndroidFastScroll), both Apache-2.0.
