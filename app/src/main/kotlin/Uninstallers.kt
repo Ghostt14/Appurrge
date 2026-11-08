@@ -4,7 +4,6 @@ package com.appurrge
 import android.content.ComponentName
 import android.content.Context
 import android.content.ServiceConnection
-import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.annotation.Keep
@@ -17,10 +16,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import rikka.shizuku.Shizuku
 import kotlin.coroutines.resume
 import kotlin.system.exitProcess
-
-/** Shizuku (the app and its library) needs Android 6.0. On older versions only root can be used. */
-const val SHIZUKU_MIN_SDK = 23
-val shizukuSupported: Boolean get() = Build.VERSION.SDK_INT >= SHIZUKU_MIN_SDK
 
 /** A way of removing one app silently. */
 interface UninstallBackend {

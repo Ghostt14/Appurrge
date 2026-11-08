@@ -1,0 +1,3 @@
+<resources>
+    <style name="DayNightBase" parent="android:Theme.Material.NoActionBar" />
+</resources>

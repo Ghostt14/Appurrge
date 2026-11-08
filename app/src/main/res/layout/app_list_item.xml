@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Sizes here are the "medium" setting; AppInfoAdapter rescales them from the Size slider. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_app_row"
-    android:foreground="?attr/selectableItemBackground"
+    android:foreground="?android:attr/selectableItemBackground"
     android:gravity="center_vertical"
-    android:minHeight="64dp"
     android:orientation="horizontal"
     android:paddingStart="16dp"
     android:paddingTop="8dp"
@@ -14,14 +14,14 @@
 
     <ImageView
         android:id="@+id/img_icon"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:importantForAccessibility="no" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
+        android:layout_marginStart="14dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -32,7 +32,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="?android:attr/textColorPrimary"
-            android:textSize="16sp" />
+            android:textSize="15sp" />
 
         <TextView
             android:id="@+id/tv_details"
@@ -41,14 +41,14 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:textColor="?android:attr/textColorSecondary"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
     </LinearLayout>
 
-    <!-- Right margin leaves room for the fast-scroll thumb. -->
+    <!-- The right padding of the row leaves room for the scroll thumb. -->
     <ImageView
         android:id="@+id/img_check"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
         android:layout_marginStart="8dp"
         android:importantForAccessibility="no"
         android:src="@drawable/ic_check"

@@ -1,8 +1,7 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_activated="true">
         <layer-list>
-            <!-- 3dp strip at the bottom of the 36dp tab (android:height on items needs API 23). -->
-            <item android:drawable="@android:color/white" android:top="33dp" />
+            <item android:drawable="@android:color/white" android:gravity="bottom" android:height="3dp" />
         </layer-list>
     </item>
     <item android:drawable="@android:color/transparent" />

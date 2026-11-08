@@ -1,21 +1,22 @@
 // Appurrge, GPL-3.0-or-later. Based on Batch Uninstaller by Sarbajit Saha.
 package com.appurrge
 
+import android.app.AlertDialog
 import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.Formatter
 import android.view.inputmethod.InputMethodManager
+import android.widget.RadioButton
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.Lifecycle
@@ -24,15 +25,15 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.appurrge.databinding.ActivityMainBinding
 import com.appurrge.databinding.DialogProgressBinding
+import com.appurrge.databinding.DialogSortBinding
 import kotlinx.coroutines.launch
-import me.zhanghai.android.fastscroll.FastScrollerBuilder
 import rikka.shizuku.Shizuku
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
     private lateinit var binding: ActivityMainBinding
     private val vm: AppListViewModel by viewModels()
     private lateinit var adapter: AppInfoAdapter
-    private val imm by lazy { getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager }
+    private val imm by lazy { getSystemService(InputMethodManager::class.java) }
 
     private var searchOpen = false
     private var lastScrollToken = 0
@@ -77,10 +78,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         onBackPressedDispatcher.addCallback(this, backCallback)
-        if (shizukuSupported) {
-            Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
-            Shizuku.addBinderReceivedListener(shizukuBinderListener)
-        }
+        Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
+        Shizuku.addBinderReceivedListener(shizukuBinderListener)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -96,10 +95,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        if (shizukuSupported) {
-            Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
-            Shizuku.removeBinderReceivedListener(shizukuBinderListener)
-        }
+        // Shizuku's remove...() calls Collection.removeIf, which Android 6 does not have; there it throws.
+        // Ignoring that only means the (tiny) listeners stay registered.
+        runCatching { Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener) }
+        runCatching { Shizuku.removeBinderReceivedListener(shizukuBinderListener) }
         progressDialog?.dismiss()
         progressDialog = null
         super.onDestroy()
@@ -108,10 +107,10 @@ class MainActivity : AppCompatActivity() {
     // ---- setup ----------------------------------------------------------------------------------
 
     private fun setupTopBar() {
-        // Right side: search (a cross while open) next to sort. Left side: a cross that appears only
-        // while apps are selected. So search and sort both stay usable with a selection.
+        // Right: search (a cross while open) next to sort. Left: a back arrow only while apps are
+        // selected. So search and sort both stay usable with a selection.
         binding.btnSearch.setOnClickListener { setSearchOpen(!searchOpen) }
-        binding.btnClear.setOnClickListener { vm.clearSelection() }
+        binding.btnBack.setOnClickListener { vm.clearSelection() }
         binding.btnSort.setOnClickListener { showSortDialog() }
         binding.etSearch.setOnEditorActionListener { _, _, _ ->
             imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
@@ -146,7 +145,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateTopBar() {
         val selecting = vm.state.value.selectedCount > 0
         backCallback.isEnabled = searchOpen || selecting
-        binding.btnClear.isVisible = selecting
+        binding.btnBack.isVisible = selecting
         binding.btnSearch.setImageResource(if (searchOpen) R.drawable.ic_close else R.drawable.ic_search)
     }
 
@@ -158,8 +157,7 @@ class MainActivity : AppCompatActivity() {
         list.setHasFixedSize(true)
         list.itemAnimator = null // switching tabs and selecting rows must be instant
 
-        // Draggable scroll thumb; the popup shows a letter, a month or a size (see the adapter).
-        FastScrollerBuilder(list).useMd2Style().setPopupTextProvider(adapter).build()
+        FastScroller(list) { adapter.popupText(it) }
 
         // Long pull needed, so scrolling back to the top does not refresh by accident.
         binding.swipe.setDistanceToTriggerSync((REFRESH_PULL_DP * resources.displayMetrics.density).toInt())
@@ -170,6 +168,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun render(s: UiState) {
         adapter.sortMode = s.sort
+        adapter.sizeLevel = s.sizeLevel
         adapter.submitList(s.rows) {
             if (s.scrollToTopToken != lastScrollToken) {
                 lastScrollToken = s.scrollToTopToken
@@ -206,7 +205,7 @@ class MainActivity : AppCompatActivity() {
         if (!fab.isVisible) return
         val needsAccess = s.selectedSystemCount > 0 && !s.privileged
         fab.setIfChanged(
-            if (needsAccess) getString(if (shizukuSupported) R.string.root_access else R.string.shizuku_android)
+            if (needsAccess) getString(R.string.root_access)
             else getString(R.string.uninstall_fab, s.selectedCount, Formatter.formatShortFileSize(this, s.selectedBytes))
         )
         fab.setCompoundDrawablesRelativeWithIntrinsicBounds(
@@ -244,14 +243,36 @@ class MainActivity : AppCompatActivity() {
 
     // ---- dialogs --------------------------------------------------------------------------------
 
+    /** Sort order (tap one to apply and close) and the row Size slider (applies live, stays open). */
     private fun showSortDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.sort)
-            .setSingleChoiceItems(R.array.sort, vm.state.value.sort.ordinal) { dialog, which ->
-                vm.setSort(SortMode.values()[which])
-                dialog.dismiss()
+        val b = DialogSortBinding.inflate(layoutInflater)
+        var dialog: AlertDialog? = null
+        val rowHeight = (40 * resources.displayMetrics.density).toInt() // not named minHeight: inside apply{} that would mean the view's own property
+        resources.getStringArray(R.array.sort).forEachIndexed { index, label ->
+            b.rgSort.addView(RadioButton(this).apply {
+                id = index + 1
+                text = label
+                minimumHeight = rowHeight
+                setOnClickListener {
+                    vm.setSort(SortMode.values()[index])
+                    dialog?.dismiss()
+                }
+            })
+        }
+        b.rgSort.check(vm.state.value.sort.ordinal + 1)
+        b.seekSize.max = ListSize.SCALES.size - 1
+        b.seekSize.progress = vm.state.value.sizeLevel
+        b.seekSize.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) vm.setSizeLevel(progress)
             }
-            .show()
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+        val shown = AlertDialog.Builder(this).setTitle(R.string.sort).setView(b.root).show()
+        dialog = shown
+        shown.window?.setDimAmount(0.15f) // keep the list visible behind, so the size change can be seen
     }
 
     private fun confirmUninstall() {
@@ -308,20 +329,20 @@ class MainActivity : AppCompatActivity() {
     private fun refreshShizuku() = vm.setShizukuReady(shizukuRunning() && shizukuPermitted())
 
     private fun shizukuRunning() = try {
-        shizukuSupported && Shizuku.pingBinder() && !Shizuku.isPreV11()
+        Shizuku.pingBinder() && !Shizuku.isPreV11()
     } catch (e: Throwable) {
         false
     }
 
     private fun shizukuPermitted() = try {
-        shizukuSupported && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+        Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
     } catch (e: Throwable) {
         false
     }
 
     /** False once the user chose "deny and don't ask again". */
     private fun shizukuCanAsk() = try {
-        shizukuSupported && !Shizuku.shouldShowRequestPermissionRationale()
+        !Shizuku.shouldShowRequestPermissionRationale()
     } catch (e: Throwable) {
         false
     }
@@ -331,7 +352,7 @@ class MainActivity : AppCompatActivity() {
     private fun handleEvent(event: UiEvent) {
         when (event) {
             is UiEvent.Message -> Toast.makeText(this, event.text, Toast.LENGTH_LONG).show()
-            UiEvent.OpenShizuku -> if (shizukuSupported) openShizuku() else toast(R.string.shizuku_android)
+            UiEvent.OpenShizuku -> openShizuku()
             is UiEvent.PromptUninstall -> {
                 val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:${event.packageName}"))
                     .putExtra(Intent.EXTRA_RETURN_RESULT, true)

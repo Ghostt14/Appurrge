@@ -3,6 +3,7 @@ package com.appurrge
 
 import java.text.Collator
 import java.util.Comparator
+import kotlin.math.roundToInt
 
 /** What the list shows. Pure Kotlin, unit tested. */
 object AppListLogic {
@@ -69,4 +70,35 @@ object UninstallCommands {
     /** pm prints "Success" or "Failure [reason]". */
     fun isSuccess(exitCode: Int, output: String): Boolean =
         exitCode == 0 && output.contains("Success", ignoreCase = true)
+}
+
+/** Row size levels for the "Size" slider (0 = smallest). Level 2 is the default. */
+object ListSize {
+    val SCALES = floatArrayOf(0.8f, 0.9f, 1f, 1.15f, 1.3f)
+    const val DEFAULT = 2
+
+    fun clamp(level: Int): Int = level.coerceIn(0, SCALES.size - 1)
+    fun scale(level: Int): Float = SCALES[clamp(level)]
+}
+
+/** Geometry of the scroll thumb. Pure so it can be unit tested. */
+object ScrollMath {
+    /** Thumb top (relative to the track) for the current scroll position; null if everything fits. */
+    fun thumbTop(offset: Int, range: Int, extent: Int, trackHeight: Int, thumbHeight: Int): Float? {
+        val scrollable = range - extent
+        if (scrollable <= 0 || trackHeight <= thumbHeight) return null
+        return offset.coerceIn(0, scrollable).toFloat() / scrollable * (trackHeight - thumbHeight)
+    }
+
+    /** 0..1 along the track for a finger at [y] (relative to the track), thumb centred on the finger. */
+    fun fraction(y: Float, trackHeight: Int, thumbHeight: Int): Float {
+        val room = trackHeight - thumbHeight
+        return if (room <= 0) 0f else ((y - thumbHeight / 2f) / room).coerceIn(0f, 1f)
+    }
+
+    fun thumbTopFor(fraction: Float, trackHeight: Int, thumbHeight: Int): Float =
+        fraction * (trackHeight - thumbHeight)
+
+    fun position(fraction: Float, itemCount: Int): Int =
+        if (itemCount <= 0) 0 else (fraction * (itemCount - 1)).roundToInt().coerceIn(0, itemCount - 1)
 }

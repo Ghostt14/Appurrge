@@ -98,4 +98,34 @@ class LogicTest {
         assertFalse(UninstallCommands.isSuccess(0, "Failure [DELETE_FAILED_DEVICE_POLICY_MANAGER]"))
         assertFalse(UninstallCommands.isSuccess(1, "Success"))
     }
+
+    @Test
+    fun scrollThumbFollowsScrollPositionAndHidesWhenListFits() {
+        // 1000px of content, 400px visible, 400px track, 50px thumb
+        assertEquals(0f, ScrollMath.thumbTop(0, 1000, 400, 400, 50))
+        assertEquals(350f, ScrollMath.thumbTop(600, 1000, 400, 400, 50))
+        assertEquals(175f, ScrollMath.thumbTop(300, 1000, 400, 400, 50))
+        assertEquals(350f, ScrollMath.thumbTop(9999, 1000, 400, 400, 50)) // overscroll is clamped
+        assertEquals(null, ScrollMath.thumbTop(0, 400, 400, 400, 50))      // everything fits: no thumb
+    }
+
+    @Test
+    fun draggingMapsFingerToListPosition() {
+        assertEquals(0f, ScrollMath.fraction(0f, 400, 50))      // above the track: clamped to the top
+        assertEquals(1f, ScrollMath.fraction(900f, 400, 50))    // below it: clamped to the end
+        assertEquals(0.5f, ScrollMath.fraction(200f, 400, 50))  // thumb centred on the finger
+        assertEquals(0, ScrollMath.position(0f, 100))
+        assertEquals(99, ScrollMath.position(1f, 100))
+        assertEquals(0, ScrollMath.position(0.7f, 0))           // empty list
+        assertEquals(175f, ScrollMath.thumbTopFor(0.5f, 400, 50))
+    }
+
+    @Test
+    fun rowSizeLevelsAreClampedAndDefaultIsMedium() {
+        assertEquals(1f, ListSize.scale(ListSize.DEFAULT))
+        assertEquals(0.8f, ListSize.scale(-5))
+        assertEquals(1.3f, ListSize.scale(99))
+        assertEquals(4, ListSize.clamp(99))
+        assertTrue(ListSize.SCALES.toList() == ListSize.SCALES.sorted())
+    }
 }
