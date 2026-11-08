@@ -1,0 +1,17 @@
+<resources>
+    <color name="colorPrimary">#3B9E23</color>
+    <color name="rowSelected">#333B9E23</color>
+
+    <!-- Follows the system light/dark setting. The status bar uses the same green as the top bar. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimary</item>
+        <item name="colorAccent">@color/colorPrimary</item>
+        <item name="android:statusBarColor">@color/colorPrimary</item>
+    </style>
+
+    <!-- White cursor and selection handles for the search box on the green bar. -->
+    <style name="SearchField" parent="ThemeOverlay.AppCompat.Dark">
+        <item name="colorControlActivated">@android:color/white</item>
+    </style>
+</resources>
