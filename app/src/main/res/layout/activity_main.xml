@@ -12,24 +12,17 @@
              Search and sort sit together on the right, so both work while apps are selected. -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="26dp"
+            android:layout_height="48dp"
             android:background="@color/colorPrimary"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <ImageButton
                 android:id="@+id/btn_back"
-                android:layout_width="44dp"
-                android:layout_height="match_parent"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/cancel"
-                android:minWidth="0dp"
-                android:minHeight="0dp"
-                android:paddingStart="10dp"
-                android:paddingTop="1dp"
-                android:paddingEnd="10dp"
-                android:paddingBottom="1dp"
-                android:scaleType="fitCenter"
                 android:src="@drawable/ic_back"
                 android:visibility="gone" />
 
@@ -37,7 +30,7 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:paddingStart="14dp">
+                android:paddingStart="16dp">
 
                 <TextView
                     android:id="@+id/tv_title"
@@ -47,7 +40,7 @@
                     android:maxLines="1"
                     android:text="@string/app_name"
                     android:textColor="#FFF"
-                    android:textSize="18sp"
+                    android:textSize="20sp"
                     android:textStyle="bold" />
 
                 <EditText
@@ -61,50 +54,35 @@
                     android:importantForAutofill="no"
                     android:inputType="text"
                     android:maxLines="1"
-                    android:padding="0dp"
                     android:textColor="#FFF"
                     android:textColorHint="#99FFFFFF"
-                    android:textSize="16sp"
+                    android:textSize="18sp"
                     android:theme="@style/SearchField"
                     android:visibility="gone" />
             </FrameLayout>
 
             <ImageButton
                 android:id="@+id/btn_search"
-                android:layout_width="44dp"
-                android:layout_height="match_parent"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/search_hint"
-                android:minWidth="0dp"
-                android:minHeight="0dp"
-                android:paddingStart="10dp"
-                android:paddingTop="1dp"
-                android:paddingEnd="10dp"
-                android:paddingBottom="1dp"
-                android:scaleType="fitCenter"
                 android:src="@drawable/ic_search" />
 
             <ImageButton
                 android:id="@+id/btn_sort"
-                android:layout_width="44dp"
-                android:layout_height="match_parent"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/sort"
-                android:minWidth="0dp"
-                android:minHeight="0dp"
-                android:paddingStart="10dp"
-                android:paddingTop="1dp"
-                android:paddingEnd="10dp"
-                android:paddingBottom="1dp"
-                android:scaleType="fitCenter"
                 android:src="@drawable/ic_sort"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="4dp" />
         </LinearLayout>
 
         <!-- Plain buttons instead of a TabLayout: no indicator animation, so switching is instant. -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="34dp"
+            android:layout_height="36dp"
             android:background="@color/colorPrimary"
             android:orientation="horizontal">
 
@@ -116,7 +94,7 @@
                 android:background="@drawable/bg_tab"
                 android:gravity="center"
                 android:textColor="#FFF"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -127,7 +105,7 @@
                 android:background="@drawable/bg_tab"
                 android:gravity="center"
                 android:textColor="#FFF"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -137,12 +115,16 @@
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_applist"
+            <com.appurrge.FastScrollListView
+                android:id="@+id/list_apps"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingBottom="88dp" />
+                android:divider="@null"
+                android:dividerHeight="0dp"
+                android:listSelector="@android:color/transparent"
+                android:paddingBottom="88dp"
+                android:scrollbars="none" />
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
     </LinearLayout>
 

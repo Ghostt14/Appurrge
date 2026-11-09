@@ -99,24 +99,40 @@ class LogicTest {
         assertFalse(UninstallCommands.isSuccess(1, "Success"))
     }
 
+    // 100 rows of 50px in a 500px viewport: 10 rows visible, so the list can scroll to row 90.
     @Test
-    fun scrollThumbFollowsScrollPositionAndHidesWhenListFits() {
-        // 1000px of content, 400px visible, 400px track, 50px thumb
-        assertEquals(0f, ScrollMath.thumbTop(0, 1000, 400, 400, 50))
-        assertEquals(350f, ScrollMath.thumbTop(600, 1000, 400, 400, 50))
-        assertEquals(175f, ScrollMath.thumbTop(300, 1000, 400, 400, 50))
-        assertEquals(350f, ScrollMath.thumbTop(9999, 1000, 400, 400, 50)) // overscroll is clamped
-        assertEquals(null, ScrollMath.thumbTop(0, 400, 400, 400, 50))      // everything fits: no thumb
+    fun scrollPositionIsMeasuredInRows() {
+        assertEquals(90f, ScrollMath.maxPosition(100, 500, 50))
+        assertEquals(0f, ScrollMath.maxPosition(5, 500, 50)) // everything fits: nothing to scroll
+        assertEquals(12.5f, ScrollMath.position(12, -25, 50)) // 13th row half way above the top
+        assertEquals(0f, ScrollMath.position(0, 0, 50))
+        assertEquals(0.5f, ScrollMath.fraction(45f, 90f))
+        assertEquals(1f, ScrollMath.fraction(200f, 90f)) // clamped
+        assertEquals(0f, ScrollMath.fraction(10f, 0f))
+        assertEquals(175f, ScrollMath.thumbTop(0.5f, 400, 50))
     }
 
     @Test
-    fun draggingMapsFingerToListPosition() {
-        assertEquals(0f, ScrollMath.fraction(0f, 400, 50))      // above the track: clamped to the top
-        assertEquals(1f, ScrollMath.fraction(900f, 400, 50))    // below it: clamped to the end
-        assertEquals(0.5f, ScrollMath.fraction(200f, 400, 50))  // thumb centred on the finger
-        assertEquals(0, ScrollMath.position(0f, 100))
-        assertEquals(99, ScrollMath.position(1f, 100))
-        assertEquals(0, ScrollMath.position(0.7f, 0))           // empty list
-        assertEquals(175f, ScrollMath.thumbTopFor(0.5f, 400, 50))
+    fun fingerPositionMapsToTheTrack() {
+        assertEquals(0f, ScrollMath.fractionAt(0f, 400, 50))     // above the track
+        assertEquals(1f, ScrollMath.fractionAt(900f, 400, 50))   // below it
+        assertEquals(0.5f, ScrollMath.fractionAt(200f, 400, 50)) // thumb centred on the finger
+        assertEquals(0f, ScrollMath.fractionAt(10f, 40, 50))     // track shorter than the thumb
+    }
+
+    // The bug this guards against: after dragging, the thumb must stay exactly where the finger left it.
+    @Test
+    fun draggingAndLettingGoGivesTheSameThumbPosition() {
+        val rows = 100; val rowH = 50; val viewport = 500; val track = 500; val thumb = 50
+        val max = ScrollMath.maxPosition(rows, viewport, rowH)
+        for (fingerY in listOf(25f, 130f, 275f, 333f, 480f)) {
+            val dragFraction = ScrollMath.fractionAt(fingerY, track, thumb)
+            val (index, offset) = ScrollMath.target(dragFraction, max, rowH)
+            // the list is now scrolled to (index, offset); the thumb is recomputed from that
+            val after = ScrollMath.fraction(ScrollMath.position(index, -offset, rowH), max)
+            assertTrue("finger $fingerY: $dragFraction vs $after", Math.abs(dragFraction - after) < 0.001f)
+        }
+        assertEquals(45 to 0, ScrollMath.target(0.5f, 90f, 50))
+        assertEquals(22 to 25, ScrollMath.target(0.25f, 90f, 50))
     }
 }

@@ -9,6 +9,7 @@ import android.graphics.drawable.InsetDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.Formatter
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.inputmethod.InputMethodManager
 import android.widget.RadioButton
@@ -24,7 +25,6 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.appurrge.databinding.ActivityMainBinding
 import com.appurrge.databinding.DialogProgressBinding
 import kotlinx.coroutines.launch
@@ -96,10 +96,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        // Shizuku's remove...() calls Collection.removeIf, which Android 6 does not have; there it throws.
-        // Ignoring that only means the (tiny) listeners stay registered.
-        runCatching { Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener) }
-        runCatching { Shizuku.removeBinderReceivedListener(shizukuBinderListener) }
+        Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+        Shizuku.removeBinderReceivedListener(shizukuBinderListener)
         progressDialog?.dismiss()
         progressDialog = null
         super.onDestroy()
@@ -151,14 +149,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupList() {
-        adapter = AppInfoAdapter(this, lifecycleScope, vm.icons) { vm.toggle(it.packageName) }
-        val list = binding.rvApplist
-        list.layoutManager = LinearLayoutManager(this)
+        adapter = AppInfoAdapter(this, lifecycleScope, vm.icons)
+        val list = binding.listApps
         list.adapter = adapter
-        list.setHasFixedSize(true)
-        list.itemAnimator = null // switching tabs and selecting rows must be instant
-
-        FastScroller(list) { adapter.popupText(it) }
+        list.setOnItemClickListener { _, _, position, _ -> vm.toggle(adapter.getItem(position).app.packageName) }
+        list.popupText = { adapter.popupText(it) }
 
         // Long pull needed, so scrolling back to the top does not refresh by accident.
         binding.swipe.setDistanceToTriggerSync((REFRESH_PULL_DP * resources.displayMetrics.density).toInt())
@@ -169,11 +164,10 @@ class MainActivity : ComponentActivity() {
 
     private fun render(s: UiState) {
         adapter.sortMode = s.sort
-        adapter.submitList(s.rows) {
-            if (s.scrollToTopToken != lastScrollToken) {
-                lastScrollToken = s.scrollToTopToken
-                binding.rvApplist.scrollToPosition(0)
-            }
+        adapter.submit(s.rows)
+        if (s.scrollToTopToken != lastScrollToken) {
+            lastScrollToken = s.scrollToTopToken
+            binding.listApps.setSelection(0)
         }
         binding.progressInitial.isVisible = s.loading
         binding.tvEmpty.isVisible = !s.loading && s.rows.isEmpty()
@@ -243,17 +237,24 @@ class MainActivity : ComponentActivity() {
 
     // ---- dialogs --------------------------------------------------------------------------------
 
-    /** Sort order. Every row spans the full width, so tapping the empty space on the right also selects it. */
+    /** Sort order. Every row spans the full width and highlights as a rectangle when pressed. */
     private fun showSortDialog() {
         val d = resources.displayMetrics.density
+        val builder = AlertDialog.Builder(this)
+        val ctx = builder.context // themed like the dialog itself
+        val rowBackground = TypedValue().also {
+            ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, it, true)
+        }.resourceId
         var dialog: AlertDialog? = null
-        val group = RadioGroup(this).apply { setPadding(0, (8 * d).toInt(), 0, (8 * d).toInt()) }
+        val group = RadioGroup(ctx).apply { setPadding(0, (8 * d).toInt(), 0, (8 * d).toInt()) }
         resources.getStringArray(R.array.sort).forEachIndexed { index, label ->
-            val row = RadioButton(this).apply {
+            val row = RadioButton(ctx).apply {
                 id = index + 1
                 text = label
                 gravity = Gravity.CENTER_VERTICAL or Gravity.START
-                // A radio dot is drawn at the very left edge of its view, so inset it from the dialog edge;
+                // The default highlight is a circle around the dot; use a rectangle over the whole row.
+                setBackgroundResource(rowBackground)
+                // The dot is drawn at the very left of its view, so inset it from the dialog edge;
                 // the start padding is the gap between the dot and the text.
                 buttonDrawable = InsetDrawable(buttonDrawable, (24 * d).toInt(), 0, 0, 0)
                 setPaddingRelative((12 * d).toInt(), 0, (24 * d).toInt(), 0)
@@ -265,8 +266,7 @@ class MainActivity : ComponentActivity() {
             group.addView(row, RadioGroup.LayoutParams(RadioGroup.LayoutParams.MATCH_PARENT, (44 * d).toInt()))
         }
         group.check(vm.state.value.sort.ordinal + 1)
-        val shown = AlertDialog.Builder(this).setTitle(R.string.sort).setView(group).show()
-        dialog = shown
+        dialog = builder.setTitle(R.string.sort).setView(group).show()
     }
 
     private fun confirmUninstall() {

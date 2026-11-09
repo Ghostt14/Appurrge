@@ -3,7 +3,6 @@ package com.appurrge
 
 import java.text.Collator
 import java.util.Comparator
-import kotlin.math.roundToInt
 
 /** What the list shows. Pure Kotlin, unit tested. */
 object AppListLogic {
@@ -25,7 +24,6 @@ object AppListLogic {
     fun matches(app: AppInfo, query: String): Boolean =
         app.appName.contains(query, ignoreCase = true) || app.packageName.contains(query, ignoreCase = true)
 
-    // Written by hand: Comparator.reversed()/thenComparing() are API 24+ and minSdk is 21.
     fun comparator(sort: SortMode): Comparator<AppInfo> = Comparator { a, b ->
         val primary = when (sort) {
             SortMode.NAME_ASC -> collator.compare(a.appName, b.appName)
@@ -72,24 +70,37 @@ object UninstallCommands {
         exitCode == 0 && output.contains("Success", ignoreCase = true)
 }
 
-/** Geometry of the scroll thumb. Pure so it can be unit tested. */
+/**
+ * Scroll-thumb geometry, in "rows" (every row has the same height). The thumb is placed from the
+ * list's scroll position and, while dragging, the list is placed from the thumb, using the same
+ * numbers in both directions, so the thumb does not jump when you let go.
+ */
 object ScrollMath {
-    /** Thumb top (relative to the track) for the current scroll position; null if everything fits. */
-    fun thumbTop(offset: Int, range: Int, extent: Int, trackHeight: Int, thumbHeight: Int): Float? {
-        val scrollable = range - extent
-        if (scrollable <= 0 || trackHeight <= thumbHeight) return null
-        return offset.coerceIn(0, scrollable).toFloat() / scrollable * (trackHeight - thumbHeight)
-    }
+    /** Scroll position in rows: 12.5 = the 13th row has scrolled half way above the top edge. */
+    fun position(firstVisible: Int, firstTop: Int, rowHeight: Int): Float =
+        firstVisible - firstTop.toFloat() / rowHeight
 
-    /** 0..1 along the track for a finger at [y] (relative to the track), thumb centred on the finger. */
-    fun fraction(y: Float, trackHeight: Int, thumbHeight: Int): Float {
+    /** Furthest position the list can reach; 0 when all rows fit on screen. */
+    fun maxPosition(rowCount: Int, viewportHeight: Int, rowHeight: Int): Float =
+        maxOf(0f, rowCount - viewportHeight.toFloat() / rowHeight)
+
+    /** 0..1 along the list. */
+    fun fraction(position: Float, maxPosition: Float): Float =
+        if (maxPosition <= 0f) 0f else (position / maxPosition).coerceIn(0f, 1f)
+
+    fun thumbTop(fraction: Float, trackHeight: Int, thumbHeight: Int): Float =
+        fraction * (trackHeight - thumbHeight)
+
+    /** 0..1 for a finger at [y] (relative to the track), with the thumb centred on the finger. */
+    fun fractionAt(y: Float, trackHeight: Int, thumbHeight: Int): Float {
         val room = trackHeight - thumbHeight
         return if (room <= 0) 0f else ((y - thumbHeight / 2f) / room).coerceIn(0f, 1f)
     }
 
-    fun thumbTopFor(fraction: Float, trackHeight: Int, thumbHeight: Int): Float =
-        fraction * (trackHeight - thumbHeight)
-
-    fun position(fraction: Float, itemCount: Int): Int =
-        if (itemCount <= 0) 0 else (fraction * (itemCount - 1)).roundToInt().coerceIn(0, itemCount - 1)
+    /** Row index and pixel offset (how far that row is scrolled above the top) to show for a fraction. */
+    fun target(fraction: Float, maxPosition: Float, rowHeight: Int): Pair<Int, Int> {
+        val position = fraction * maxPosition
+        val index = position.toInt()
+        return index to ((position - index) * rowHeight).toInt()
+    }
 }

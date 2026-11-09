@@ -27,5 +27,5 @@ JDK 17 and the Android SDK (platform 33):
 The GitHub Actions workflow does this on every push and uploads the APK. Debug and release builds are shrunk the same way,
 so both are small. The release APK is signed with the debug key so it can be installed; it is not meant for a store.
 
-Android 6.0+ (Shizuku's minimum). Uses [Shizuku-API](https://github.com/RikkaApps/Shizuku-API) (Apache-2.0).
-No AppCompat or Material library: plain Android views and a built-in scroller.
+Android 7.0+. Uses [Shizuku-API](https://github.com/RikkaApps/Shizuku-API) (Apache-2.0).
+No AppCompat, Material or RecyclerView: plain Android views and a built-in scroll bar.

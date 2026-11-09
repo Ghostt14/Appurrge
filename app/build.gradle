@@ -12,11 +12,11 @@ android {
 
     defaultConfig {
         applicationId "com.appurrge"
-        // Android 6.0 (Shizuku's own minimum)
-        minSdkVersion 23
+        // Android 7.0. This also matches Shizuku's libraries and drops the old v1 APK signature.
+        minSdkVersion 24
         targetSdkVersion 33
-        versionCode 4
-        versionName "1.3"
+        versionCode 5
+        versionName "1.4"
         // The app is English only; drops the translated strings that AndroidX libraries bundle.
         resConfigs "en"
     }
@@ -42,6 +42,19 @@ android {
         jvmTarget = '1.8'
     }
 
+    packagingOptions {
+        resources {
+            // Files only IDEs and the Kotlin compiler read (reflection data, version stamps, debug-agent
+            // data). Nothing in the app reads them at runtime. META-INF/services is kept: coroutines need it.
+            excludes += [
+                '/kotlin/**',
+                '/kotlin-tooling-metadata.json',
+                '/DebugProbesKt.bin',
+                '/META-INF/*.version'
+            ]
+        }
+    }
+
     lint {
         // Report problems (see the CI artifact) without failing the build.
         abortOnError false
@@ -50,7 +63,6 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.activity:activity-ktx:1.6.1'
