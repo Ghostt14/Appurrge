@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.InsetDrawable
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.Formatter
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
     private val imm by lazy { getSystemService(InputMethodManager::class.java) }
 
     private var searchOpen = false
+    private var keyboardWasUp = false
     private var lastScrollToken = 0
     private var uninstallAfterPermission = false
     private var progressDialog: AlertDialog? = null
@@ -71,6 +73,7 @@ class MainActivity : ComponentActivity() {
 
         setupTopBar()
         setupList()
+        watchKeyboard()
         binding.tabUser.setOnClickListener { vm.setTab(AppTab.USER) }
         binding.tabSystem.setOnClickListener { vm.setTab(AppTab.SYSTEM) }
         binding.fabUninstall.setOnClickListener {
@@ -141,6 +144,30 @@ class MainActivity : ComponentActivity() {
         updateTopBar()
     }
 
+    /**
+     * Back, the keyboard's own hide button or tapping elsewhere hides the keyboard but leaves the blinking
+     * cursor in the search box. Whenever the keyboard goes away while searching, take the focus off the box
+     * (the search itself stays open; tapping the box again brings the keyboard back).
+     */
+    private fun watchKeyboard() {
+        val root = binding.root
+        val threshold = 100 * resources.displayMetrics.density
+        root.viewTreeObserver.addOnGlobalLayoutListener {
+            if (!searchOpen) {
+                keyboardWasUp = false
+                return@addOnGlobalLayoutListener
+            }
+            val frame = Rect()
+            root.getWindowVisibleDisplayFrame(frame)
+            val up = root.rootView.height - frame.bottom > threshold
+            if (keyboardWasUp && !up) {
+                binding.etSearch.clearFocus()
+                root.requestFocus() // the root takes the focus, so the search box does not get it back
+            }
+            keyboardWasUp = up
+        }
+    }
+
     private fun updateTopBar() {
         val selecting = vm.state.value.selectedCount > 0
         backCallback.isEnabled = searchOpen || selecting
@@ -152,7 +179,7 @@ class MainActivity : ComponentActivity() {
         adapter = AppInfoAdapter(this, lifecycleScope, vm.icons)
         val list = binding.listApps
         list.adapter = adapter
-        list.setOnItemClickListener { _, _, position, _ -> vm.toggle(adapter.getItem(position).app.packageName) }
+        list.onRowTap = { position -> if (position < adapter.count) vm.toggle(adapter.getItem(position).app.packageName) }
         list.popupText = { adapter.popupText(it) }
 
         // Long pull needed, so scrolling back to the top does not refresh by accident.
@@ -363,7 +390,7 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val REQUEST_SHIZUKU = 1001
-        const val REFRESH_PULL_DP = 200
+        const val REFRESH_PULL_DP = 140
         const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
         const val SHIZUKU_URL = "https://shizuku.rikka.app/download/"
     }

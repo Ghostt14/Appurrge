@@ -7,10 +7,13 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.util.SparseArray
 import android.util.TypedValue
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.widget.AbsListView
 import android.widget.ListView
+import kotlin.math.abs
 
 /**
  * The built-in ListView plus a draggable scroll thumb on the right edge. The thumb shows while
@@ -40,6 +43,19 @@ class FastScrollListView @JvmOverloads constructor(context: Context, attrs: Attr
         textAlign = Paint.Align.CENTER
     }
 
+    /**
+     * Called for every finger that taps a row. A plain ListView follows only one finger at a time, so
+     * tapping several rows at once would select just one; taps are therefore tracked per finger here.
+     */
+    var onRowTap: (Int) -> Unit = {}
+
+    private class Down(val x: Float, val y: Float, val time: Long)
+
+    private val downs = SparseArray<Down>() // finger id -> where and when it touched down
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private val tapTimeout = ViewConfiguration.getLongPressTimeout().toLong()
+    private var listScrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE
+
     private var dragging = false
     private var dragFraction = 0f
     private var label = ""
@@ -50,7 +66,9 @@ class FastScrollListView @JvmOverloads constructor(context: Context, attrs: Attr
 
     init {
         setOnScrollListener(object : AbsListView.OnScrollListener {
-            override fun onScrollStateChanged(view: AbsListView?, scrollState: Int) {}
+            override fun onScrollStateChanged(view: AbsListView?, scrollState: Int) {
+                listScrollState = scrollState
+            }
 
             override fun onScroll(view: AbsListView?, first: Int, visible: Int, total: Int) {
                 val position = scrollPosition()
@@ -109,6 +127,41 @@ class FastScrollListView @JvmOverloads constructor(context: Context, attrs: Attr
     }
 
     // ---- touch
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        trackTaps(ev) // only watches; the ListView still scrolls and drags as usual
+        return super.dispatchTouchEvent(ev)
+    }
+
+    private fun trackTaps(ev: MotionEvent) {
+        val index = ev.actionIndex
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downs.clear()
+                // A touch that only stops a flinging list is not a tap.
+                if (listScrollState != AbsListView.OnScrollListener.SCROLL_STATE_FLING) {
+                    downs.put(ev.getPointerId(0), Down(ev.x, ev.y, ev.eventTime))
+                }
+            }
+            MotionEvent.ACTION_POINTER_DOWN ->
+                downs.put(ev.getPointerId(index), Down(ev.getX(index), ev.getY(index), ev.eventTime))
+            MotionEvent.ACTION_MOVE -> for (i in 0 until ev.pointerCount) {
+                val id = ev.getPointerId(i)
+                val down = downs.get(id) ?: continue
+                if (abs(ev.getX(i) - down.x) > touchSlop || abs(ev.getY(i) - down.y) > touchSlop) downs.remove(id)
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                val id = ev.getPointerId(index)
+                val down = downs.get(id)
+                downs.remove(id)
+                if (down != null && !dragging && ev.eventTime - down.time <= tapTimeout) {
+                    val position = pointToPosition(down.x.toInt(), down.y.toInt())
+                    if (position >= 0) onRowTap(position)
+                }
+            }
+            MotionEvent.ACTION_CANCEL -> downs.clear()
+        }
+    }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         if (ev.actionMasked == MotionEvent.ACTION_DOWN && ev.x >= width - grabWidth) {
