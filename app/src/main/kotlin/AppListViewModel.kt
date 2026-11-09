@@ -2,7 +2,6 @@
 package com.appurrge
 
 import android.app.Application
-import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
@@ -25,10 +24,7 @@ class AppListViewModel(private val app: Application) : AndroidViewModel(app) {
     private val eventChannel = Channel<UiEvent>(Channel.UNLIMITED)
     val events: Flow<UiEvent> = eventChannel.receiveAsFlow()
 
-    // Icons are decoded at the largest row setting (40dp x 1.3) so they stay sharp at every size.
-    val icons = IconLoader(app.packageManager, (52 * app.resources.displayMetrics.density).toInt())
-
-    private val prefs = app.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    val icons = IconLoader(app.packageManager, (40 * app.resources.displayMetrics.density).toInt())
 
     private var all: List<AppInfo> = emptyList()
     private val selected = LinkedHashSet<String>()
@@ -45,7 +41,6 @@ class AppListViewModel(private val app: Application) : AndroidViewModel(app) {
 
     // Keep below the properties above: it uses them.
     init {
-        _state.update { it.copy(sizeLevel = ListSize.clamp(prefs.getInt(KEY_SIZE, ListSize.DEFAULT))) }
         viewModelScope.launch(Dispatchers.Default) { AppListLogic.warmUp() }
         load()
     }
@@ -96,14 +91,6 @@ class AppListViewModel(private val app: Application) : AndroidViewModel(app) {
     fun setTab(tab: AppTab) = change(_state.value.tab != tab) { it.copy(tab = tab) }
     fun setSort(sort: SortMode) = change(_state.value.sort != sort) { it.copy(sort = sort) }
     fun setQuery(query: String) = change(_state.value.query != query) { it.copy(query = query) }
-
-    /** Row size from the slider; takes effect live and is remembered. */
-    fun setSizeLevel(level: Int) {
-        val clamped = ListSize.clamp(level)
-        if (clamped == _state.value.sizeLevel) return
-        prefs.edit().putInt(KEY_SIZE, clamped).apply()
-        _state.update { it.copy(sizeLevel = clamped) }
-    }
 
     private fun change(changed: Boolean, transform: (UiState) -> UiState) {
         if (changed) publish { transform(it).let { s -> s.copy(scrollToTopToken = s.scrollToTopToken + 1) } }
@@ -246,6 +233,5 @@ class AppListViewModel(private val app: Application) : AndroidViewModel(app) {
     private companion object {
         /** How many of the newest apps are read first so the list can appear immediately. */
         const val FIRST_BATCH = 24
-        const val KEY_SIZE = "size_level"
     }
 }

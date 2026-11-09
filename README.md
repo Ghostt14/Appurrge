@@ -9,7 +9,6 @@ by Sarbajit Saha and is now its own project. It stays under the same license (GP
 - Opens fast: the last list is cached, and on a first run the newest apps appear before the rest finish loading.
 - **User / System** tabs, **search** (left of the top bar) and **sort** (right of the top bar, always reachable).
 - Draggable fast-scroll bar (built in, no library); its popup shows a letter, a month or a size depending on the sort.
-- A **Size** slider in the sort dialog changes how big the rows are, live.
 - Selection is kept when you refresh, search or switch tabs.
 - Silent uninstall through **Shizuku** or **root**. Without either, Android's own dialog is used (user apps only).
 - With system apps selected, the button reads **ROOT ACCESS** until Shizuku (or root) is connected.

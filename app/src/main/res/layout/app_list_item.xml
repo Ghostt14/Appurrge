@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sizes here are the "medium" setting; AppInfoAdapter rescales them from the Size slider. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -43,14 +42,4 @@
             android:textColor="?android:attr/textColorSecondary"
             android:textSize="12sp" />
     </LinearLayout>
-
-    <!-- The right padding of the row leaves room for the scroll thumb. -->
-    <ImageView
-        android:id="@+id/img_check"
-        android:layout_width="22dp"
-        android:layout_height="22dp"
-        android:layout_marginStart="8dp"
-        android:importantForAccessibility="no"
-        android:src="@drawable/ic_check"
-        android:visibility="gone" />
 </LinearLayout>

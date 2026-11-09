@@ -2,7 +2,6 @@
     <string name="app_name">Appurrge</string>
     <string name="search_hint">Search</string>
     <string name="sort">Sort</string>
-    <string name="size">Size</string>
     <string name="tab_user">User (%1$d)</string>
     <string name="tab_system">System (%1$d)</string>
     <string name="n_selected">%1$d selected</string>

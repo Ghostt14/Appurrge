@@ -31,8 +31,6 @@ data class UiState(
     val tab: AppTab = AppTab.USER,
     val sort: SortMode = SortMode.DATE_DESC,
     val query: String = "",
-    /** Index into [ListSize.SCALES]. */
-    val sizeLevel: Int = ListSize.DEFAULT,
     val userCount: Int = 0,
     val systemCount: Int = 0,
     val selectedCount: Int = 0,

@@ -119,13 +119,4 @@ class LogicTest {
         assertEquals(0, ScrollMath.position(0.7f, 0))           // empty list
         assertEquals(175f, ScrollMath.thumbTopFor(0.5f, 400, 50))
     }
-
-    @Test
-    fun rowSizeLevelsAreClampedAndDefaultIsMedium() {
-        assertEquals(1f, ListSize.scale(ListSize.DEFAULT))
-        assertEquals(0.8f, ListSize.scale(-5))
-        assertEquals(1.3f, ListSize.scale(99))
-        assertEquals(4, ListSize.clamp(99))
-        assertTrue(ListSize.SCALES.toList() == ListSize.SCALES.sorted())
-    }
 }

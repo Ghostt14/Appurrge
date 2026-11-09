@@ -72,15 +72,6 @@ object UninstallCommands {
         exitCode == 0 && output.contains("Success", ignoreCase = true)
 }
 
-/** Row size levels for the "Size" slider (0 = smallest). Level 2 is the default. */
-object ListSize {
-    val SCALES = floatArrayOf(0.8f, 0.9f, 1f, 1.15f, 1.3f)
-    const val DEFAULT = 2
-
-    fun clamp(level: Int): Int = level.coerceIn(0, SCALES.size - 1)
-    fun scale(level: Int): Float = SCALES[clamp(level)]
-}
-
 /** Geometry of the scroll thumb. Pure so it can be unit tested. */
 object ScrollMath {
     /** Thumb top (relative to the track) for the current scroll position; null if everything fits. */

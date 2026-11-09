@@ -5,12 +5,14 @@ import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.InsetDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.Formatter
+import android.view.Gravity
 import android.view.inputmethod.InputMethodManager
 import android.widget.RadioButton
-import android.widget.SeekBar
+import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -25,7 +27,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.appurrge.databinding.ActivityMainBinding
 import com.appurrge.databinding.DialogProgressBinding
-import com.appurrge.databinding.DialogSortBinding
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
 
@@ -168,7 +169,6 @@ class MainActivity : ComponentActivity() {
 
     private fun render(s: UiState) {
         adapter.sortMode = s.sort
-        adapter.sizeLevel = s.sizeLevel
         adapter.submitList(s.rows) {
             if (s.scrollToTopToken != lastScrollToken) {
                 lastScrollToken = s.scrollToTopToken
@@ -243,36 +243,30 @@ class MainActivity : ComponentActivity() {
 
     // ---- dialogs --------------------------------------------------------------------------------
 
-    /** Sort order (tap one to apply and close) and the row Size slider (applies live, stays open). */
+    /** Sort order. Every row spans the full width, so tapping the empty space on the right also selects it. */
     private fun showSortDialog() {
-        val b = DialogSortBinding.inflate(layoutInflater)
+        val d = resources.displayMetrics.density
         var dialog: AlertDialog? = null
-        val rowHeight = (40 * resources.displayMetrics.density).toInt() // not named minHeight: inside apply{} that would mean the view's own property
+        val group = RadioGroup(this).apply { setPadding(0, (8 * d).toInt(), 0, (8 * d).toInt()) }
         resources.getStringArray(R.array.sort).forEachIndexed { index, label ->
-            b.rgSort.addView(RadioButton(this).apply {
+            val row = RadioButton(this).apply {
                 id = index + 1
                 text = label
-                minimumHeight = rowHeight
+                gravity = Gravity.CENTER_VERTICAL or Gravity.START
+                // A radio dot is drawn at the very left edge of its view, so inset it from the dialog edge;
+                // the start padding is the gap between the dot and the text.
+                buttonDrawable = InsetDrawable(buttonDrawable, (24 * d).toInt(), 0, 0, 0)
+                setPaddingRelative((12 * d).toInt(), 0, (24 * d).toInt(), 0)
                 setOnClickListener {
                     vm.setSort(SortMode.values()[index])
                     dialog?.dismiss()
                 }
-            })
-        }
-        b.rgSort.check(vm.state.value.sort.ordinal + 1)
-        b.seekSize.max = ListSize.SCALES.size - 1
-        b.seekSize.progress = vm.state.value.sizeLevel
-        b.seekSize.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) vm.setSizeLevel(progress)
             }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-        val shown = AlertDialog.Builder(this).setTitle(R.string.sort).setView(b.root).show()
+            group.addView(row, RadioGroup.LayoutParams(RadioGroup.LayoutParams.MATCH_PARENT, (44 * d).toInt()))
+        }
+        group.check(vm.state.value.sort.ordinal + 1)
+        val shown = AlertDialog.Builder(this).setTitle(R.string.sort).setView(group).show()
         dialog = shown
-        shown.window?.setDimAmount(0.15f) // keep the list visible behind, so the size change can be seen
     }
 
     private fun confirmUninstall() {
