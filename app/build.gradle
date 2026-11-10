@@ -15,8 +15,8 @@ android {
         // Android 7.0. This also matches Shizuku's libraries and drops the old v1 APK signature.
         minSdkVersion 24
         targetSdkVersion 33
-        versionCode 7
-        versionName "1.6"
+        versionCode 8
+        versionName "1.7"
         // English and Spanish only; drops the other translations that AndroidX libraries bundle.
         resConfigs "en", "es"
     }

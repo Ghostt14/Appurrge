@@ -3,7 +3,7 @@
     <string name="sort">Ordenar</string>
     <string name="tab_user">Usuario (%1$d)</string>
     <string name="tab_system">Sistema (%1$d)</string>
-    <string name="n_selected">Seleccionadas: %1$d</string>
+    <string name="n_selected">Seleccionados: %1$d</string>
     <string name="empty_list">Sin apps</string>
     <string name="load_failed">No se pudieron cargar las apps</string>
 
@@ -32,8 +32,8 @@
     <string-array name="sort">
         <item>A a Z</item>
         <item>Z a A</item>
-        <item>Más pequeñas primero</item>
-        <item>Más grandes primero</item>
+        <item>Menor tamaño</item>
+        <item>Mayor tamaño</item>
         <item>Más antiguas primero</item>
         <item>Más recientes primero</item>
     </string-array>

@@ -7,6 +7,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.util.LruCache
+import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -116,7 +117,7 @@ class IconLoader(private val pm: PackageManager, private val sizePx: Int) {
 
     suspend fun load(packageName: String): Bitmap? = withContext(Dispatchers.IO) {
         cache.get(packageName) ?: try {
-            DemoIcons.make(DemoData.nameOf(packageName), sizePx).also { cache.put(packageName, it) }
+            pm.getApplicationIcon(packageName).toBitmap(sizePx, sizePx).also { cache.put(packageName, it) }
         } catch (e: Exception) {
             null
         }
