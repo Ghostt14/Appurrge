@@ -4,7 +4,6 @@ package com.appurrge
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.drawable.InsetDrawable
 import android.graphics.Rect
 import android.net.Uri
@@ -349,24 +348,12 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshShizuku() = vm.setShizukuReady(shizukuRunning() && shizukuPermitted())
 
-    private fun shizukuRunning() = try {
-        Shizuku.pingBinder() && !Shizuku.isPreV11()
-    } catch (e: Throwable) {
-        false
-    }
+    private fun shizukuRunning() = false // demo: Shizuku is simulated
 
-    private fun shizukuPermitted() = try {
-        Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-    } catch (e: Throwable) {
-        false
-    }
+    private fun shizukuPermitted() = false // demo: Shizuku is simulated
 
     /** False once the user chose "deny and don't ask again". */
-    private fun shizukuCanAsk() = try {
-        !Shizuku.shouldShowRequestPermissionRationale()
-    } catch (e: Throwable) {
-        false
-    }
+    private fun shizukuCanAsk() = false // demo: Shizuku is simulated
 
     // ---- events ---------------------------------------------------------------------------------
 
