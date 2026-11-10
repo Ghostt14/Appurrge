@@ -1,31 +1,42 @@
 # Appurrge
 
-Select many apps and uninstall them in one go. No ads, no tracking, no bloat.
+**Fast launch and minimal size app uninstaller for Android.**
 
-Appurrge started from the code of [Batch Uninstaller](https://github.com/sarbajitsaha/Batch-Uninstaller)
-by Sarbajit Saha and is now its own project. It stays under the same license (GPL-3.0, see `LICENSE`).
+Select apps and remove them in one go. No ads, no tracking, no unnecessary permissions.
+
+## Requirements
+
+- Android 7.0+ (API 24)
+- Optional: [Shizuku](https://shizuku.rikka.app/) For silent batch uninstalls with no user input & system-app uninstalls
+
+[![GitHub downloads](https://img.shields.io/github/downloads/Ghostt14/Appurrge/total?style=for-the-badge)](https://github.com/Ghostt14/Appurrge/releases)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
+[![Repository size](https://img.shields.io/github/repo-size/Ghostt14/Appurrge?style=flat-square)](https://github.com/Ghostt14/Appurrge)
+[![GitHub release](https://img.shields.io/github/v/release/Ghostt14/Appurrge?style=for-the-badge)](https://github.com/Ghostt14/Appurrge/releases)
+[![F-Droid](https://img.shields.io/badge/F--Droid-coming_soon-green?style=for-the-badge&logo=f-droid)](https://f-droid.org)
+[![Obtainium](https://img.shields.io/badge/Obtainium-ready-blue?style=for-the-badge)](https://github.com/ImranR98/Obtainium)
 
 ## Features
-- Opens fast: the last list is cached, and on a first run the newest apps appear before the rest finish loading.
-- **User / System** tabs, **search** (left of the top bar) and **sort** (right of the top bar, always reachable).
-- Draggable fast-scroll bar (built in, no library); its popup shows a letter, a month or a size depending on the sort.
-- Selection is kept when you refresh, search or switch tabs.
-- Silent uninstall through **Shizuku** or **root**. Without either, Android's own dialog is used (user apps only).
-- With system apps selected, the button reads **ROOT ACCESS** until Shizuku (or root) is connected.
-- Search and sort sit together on the right of the top bar, so both work while apps are selected.
 
-System apps are removed for your user only (`pm uninstall -k --user 0`). That is reversible with
-`cmd package install-existing <package>` and never deletes files under `/system`.
+- **Extremely fast startup** — last list is cached; newest apps appear first on cold start
+- User / System tabs to separate apps
+- Instant search + sort (always reachable, even while selecting)
+- Built-in draggable fast-scroller (letter / month / size popup)
+- Selection survives refresh, search, and tab switches
+- Silent uninstall via **Shizuku** or root  
+  (falls back to Android’s normal confirmation dialog for user apps)
+- System apps are only removed for the current user (`pm uninstall -k --user 0`) — fully reversible and never touches `/system`
+- Tiny APK (heavily shrunk with R8 + resource shrinking on every build)
 
-## Build
-JDK 17 and the Android SDK (platform 33):
+## Comparison
 
-```
-./gradlew testDebugUnitTest assembleRelease
-```
+|            | **Appurrge** | Batch Uninstaller | Splend Apps - Uninstaller |
+| ---------- | ------------ | ----------------- | ------------------------- |
+| APK size   | **216kb**    | 2.48mb            | 15mb                      |
+| App size   | **682kb**    | 6.37mb            | 27.53mb                   |
+| Cold Start | **~214ms**   | ~1.81s            | ~366ms (read below)       |
 
-The GitHub Actions workflow does this on every push and uploads the APK. Debug and release builds are shrunk the same way,
-so both are small. The release APK is signed with the debug key so it can be installed; it is not meant for a store.
-
-Android 7.0+. Uses [Shizuku-API](https://github.com/RikkaApps/Shizuku-API) (Apache-2.0).
-No AppCompat, Material or RecyclerView: plain Android views and a built-in scroll bar.
+> Information were averages taken from S22+, SA15.
+> Actual cold-start numbers vary by device and number of installed apps.
+> 
+> Splend Apps - Uninstaller has a load screen once the app launches, which based on screen recording can end up being slower or equal to Batch Uninstaller

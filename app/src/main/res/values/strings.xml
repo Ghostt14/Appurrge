@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Appurrge</string>
+    <string name="app_name" translatable="false">Appurrge</string>
     <string name="search_hint">Search</string>
     <string name="sort">Sort</string>
     <string name="tab_user">User (%1$d)</string>
