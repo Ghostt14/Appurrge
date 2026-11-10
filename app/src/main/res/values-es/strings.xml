@@ -1,0 +1,40 @@
+<resources>
+    <string name="search_hint">Buscar</string>
+    <string name="sort">Ordenar</string>
+    <string name="tab_user">Usuario (%1$d)</string>
+    <string name="tab_system">Sistema (%1$d)</string>
+    <string name="n_selected">Seleccionadas: %1$d</string>
+    <string name="empty_list">Sin apps</string>
+    <string name="load_failed">No se pudieron cargar las apps</string>
+
+    <string name="uninstall">Desinstalar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="uninstall_fab">Desinstalar %1$d · %2$s</string>
+    <string name="root_access">ACCESO ROOT</string>
+    <plurals name="uninstall_confirm_title">
+        <item quantity="one">¿Desinstalar %d app?</item>
+        <item quantity="many">¿Desinstalar %d apps?</item>
+        <item quantity="other">¿Desinstalar %d apps?</item>
+    </plurals>
+    <string name="uninstall_confirm_message">Libera unos %1$s</string>
+    <string name="system_warning">Desinstalar apps del sistema puede dañar tu teléfono, úsalo solo si sabes lo que haces</string>
+    <string name="uninstalling">Desinstalando…</string>
+    <string name="uninstalling_item">%3$s (%1$d de %2$d)</string>
+
+    <string name="uninstall_complete">App(s) desinstalada(s)</string>
+    <string name="uninstall_summary">Desinstaladas %1$d, fallidas %2$d</string>
+    <string name="uninstall_cancelled">Cancelado, desinstaladas %1$d</string>
+    <string name="system_needs_access">Las apps del sistema requieren Shizuku o root</string>
+    <string name="start_shizuku">Inicia Shizuku y vuelve a tocar</string>
+    <string name="no_shizuku">Instala Shizuku para quitar apps del sistema</string>
+    <string name="shizuku_denied">Permite Appurrge en la app Shizuku</string>
+
+    <string-array name="sort">
+        <item>A a Z</item>
+        <item>Z a A</item>
+        <item>Más pequeñas primero</item>
+        <item>Más grandes primero</item>
+        <item>Más antiguas primero</item>
+        <item>Más recientes primero</item>
+    </string-array>
+</resources>

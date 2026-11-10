@@ -1,31 +1,11 @@
-# Appurrge
+# Appurrge Demo
 
-Select many apps and uninstall them in one go. No ads, no tracking, no bloat.
+A separate build of [Appurrge](https://github.com/Ghostt14/Appurrge) for screen recordings.
 
-Appurrge started from the code of [Batch Uninstaller](https://github.com/sarbajitsaha/Batch-Uninstaller)
-by Sarbajit Saha and is now its own project. It stays under the same license (GPL-3.0, see `LICENSE`).
+- Shows **40 made-up apps** (30 user, 10 system) with different names, install dates and sizes, instead of the phone's real apps.
+- Uninstalling is **simulated**: the progress dialog and messages are the real ones, but nothing is removed from the phone.
+- Selecting system apps shows **ROOT ACCESS**; tapping it simulates granting access, so no Shizuku dialog appears.
+- **Pull to refresh** brings back every "uninstalled" app, for another take.
+- Installs next to the real app (`com.appurrge.demo`, named "Appurrge Demo") and asks for no permissions.
 
-## Features
-- Opens fast: the last list is cached, and on a first run the newest apps appear before the rest finish loading.
-- **User / System** tabs, **search** (left of the top bar) and **sort** (right of the top bar, always reachable).
-- Draggable fast-scroll bar (built in, no library); its popup shows a letter, a month or a size depending on the sort.
-- Selection is kept when you refresh, search or switch tabs.
-- Silent uninstall through **Shizuku** or **root**. Without either, Android's own dialog is used (user apps only).
-- With system apps selected, the button reads **ROOT ACCESS** until Shizuku (or root) is connected.
-- Search and sort sit together on the right of the top bar, so both work while apps are selected.
-
-System apps are removed for your user only (`pm uninstall -k --user 0`). That is reversible with
-`cmd package install-existing <package>` and never deletes files under `/system`.
-
-## Build
-JDK 17 and the Android SDK (platform 33):
-
-```
-./gradlew testDebugUnitTest assembleRelease
-```
-
-The GitHub Actions workflow does this on every push and uploads the APK. Debug and release builds are shrunk the same way,
-so both are small. The release APK is signed with the debug key so it can be installed; it is not meant for a store.
-
-Android 7.0+. Uses [Shizuku-API](https://github.com/RikkaApps/Shizuku-API) (Apache-2.0).
-No AppCompat, Material or RecyclerView: plain Android views and a built-in scroll bar.
+GPL-3.0, see `LICENSE`.

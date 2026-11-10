@@ -1,4 +1,4 @@
-// Appurrge, GPL-3.0-or-later. Based on Batch Uninstaller by Sarbajit Saha.
+// Appurrge, GPL-3.0-only. Based on Batch Uninstaller by Sarbajit Saha.
 package com.appurrge
 
 /** One installed app. No Context or Bitmap in here, so it is cheap to build, cache and test. */

@@ -1,13 +1,13 @@
-// Appurrge, GPL-3.0-or-later. Based on Batch Uninstaller by Sarbajit Saha.
+// Appurrge, GPL-3.0-only. Based on Batch Uninstaller by Sarbajit Saha.
 package com.appurrge
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,39 +50,18 @@ class AppListViewModel(private val app: Application) : AndroidViewModel(app) {
     fun refresh() = load()
 
     /**
-     * Fast start: (1) show last launch's list from the disk cache, if any; (2) otherwise show the
-     * newest apps as soon as their labels are read; (3) then finish the rest and update the cache.
+     * Demo build: the list is made-up sample data (see DemoData), not the phone's real apps.
+     * Pulling to refresh brings back any apps that were "uninstalled", handy for a second take.
      */
     private fun load() {
         if (loadJob?.isActive == true) return
         val first = all.isEmpty()
         _state.update { it.copy(loading = first, refreshing = !first) }
         loadJob = viewModelScope.launch {
-            try {
-                if (first) {
-                    val cached = PackageUtils.readCache(app)
-                    if (cached.isNotEmpty()) {
-                        all = cached
-                        publish { it.copy(loading = false) }
-                    }
-                }
-                val raw = PackageUtils.installedPackages(app)
-                val head = PackageUtils.toApps(app, raw.take(FIRST_BATCH))
-                if (all.isEmpty()) {
-                    all = head
-                    publish { it.copy(loading = false) }
-                }
-                val loaded = head + PackageUtils.toApps(app, raw.drop(FIRST_BATCH))
-                all = loaded
-                selected.retainAll(loaded.mapTo(HashSet()) { it.packageName }) // selection survives a refresh
-                PackageUtils.writeCache(app, loaded)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                eventChannel.trySend(UiEvent.Message(app.getString(R.string.load_failed)))
-            } finally {
-                publish { it.copy(loading = false, refreshing = false) }
-            }
+            if (!first) delay(700) // long enough for the refresh spinner to be seen
+            all = DemoData.apps()
+            selected.retainAll(all.mapTo(HashSet()) { it.packageName })
+            publish { it.copy(loading = false, refreshing = false) }
         }
     }
 
@@ -118,7 +97,9 @@ class AppListViewModel(private val app: Application) : AndroidViewModel(app) {
     fun tryRoot() {
         if (rootJob?.isActive == true) return
         rootJob = viewModelScope.launch {
-            if (isRoot()) publish() else eventChannel.trySend(UiEvent.OpenShizuku)
+            delay(400) // pretend to ask for access
+            rootReady = true
+            publish()
         }
     }
 
@@ -159,11 +140,7 @@ class AppListViewModel(private val app: Application) : AndroidViewModel(app) {
         val targets = all.filter { it.packageName in selected }.sortedBy { it.packageName == BuildConfig.APPLICATION_ID }
         cancelRequested = false
         uninstallJob = viewModelScope.launch {
-            val backend: UninstallBackend? = when {
-                shizukuReady -> ShizukuUninstaller
-                isRoot() -> RootUtils
-                else -> null
-            }
+            val backend: UninstallBackend? = DemoUninstaller // nothing is really uninstalled
             if (backend == null) startPrompts(targets) else runBatch(backend, targets)
         }
     }
