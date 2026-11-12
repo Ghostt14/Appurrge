@@ -1,12 +1,12 @@
 // Appurrge, GPL-3.0-only. Based on Batch Uninstaller by Sarbajit Saha.
 package com.appurrge
 
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.drawable.InsetDrawable
 import android.graphics.Rect
+import android.graphics.drawable.InsetDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.text.format.Formatter
@@ -17,93 +17,82 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.OnBackPressedCallback
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import com.appurrge.databinding.ActivityMainBinding
 import com.appurrge.databinding.DialogProgressBinding
-import kotlinx.coroutines.launch
-import rikka.shizuku.Shizuku
 
-class MainActivity : ComponentActivity() {
+/** The one screen. It only draws what [AppModel] says and passes taps back to it. */
+class MainActivity : Activity(), AppModel.Listener {
     private lateinit var binding: ActivityMainBinding
-    private val vm: AppListViewModel by viewModels()
+    private lateinit var model: AppModel
     private lateinit var adapter: AppInfoAdapter
     private val imm by lazy { getSystemService(InputMethodManager::class.java) }
 
     private var searchOpen = false
     private var keyboardWasUp = false
     private var lastScrollToken = 0
-    private var uninstallAfterPermission = false
     private var progressDialog: AlertDialog? = null
     private var progressBinding: DialogProgressBinding? = null
 
-    /** Android's own uninstall dialog (fallback without Shizuku/root). */
-    private val uninstallLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { vm.onPromptResult() }
-
-    private val shizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { requestCode, _ ->
-        if (requestCode == REQUEST_SHIZUKU) {
-            refreshShizuku()
-            if (uninstallAfterPermission) {
-                uninstallAfterPermission = false
-                vm.uninstallSelected() // uses Shizuku if allowed, otherwise root or Android's dialog
-            }
-        }
-    }
-    private val shizukuBinderListener = Shizuku.OnBinderReceivedListener { refreshShizuku() }
-
-    /** Back closes search first, then clears the selection, then leaves the app. */
-    private val backCallback = object : OnBackPressedCallback(false) {
-        override fun handleOnBackPressed() {
-            if (searchOpen) setSearchOpen(false) else vm.clearSelection()
-        }
-    }
+    // ---- lifecycle ------------------------------------------------------------------------------
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        model = AppModel.get(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         setupTopBar()
         setupList()
         watchKeyboard()
-        binding.tabUser.setOnClickListener { vm.setTab(AppTab.USER) }
-        binding.tabSystem.setOnClickListener { vm.setTab(AppTab.SYSTEM) }
+        binding.tabUser.setOnClickListener { model.setTab(AppTab.USER) }
+        binding.tabSystem.setOnClickListener { model.setTab(AppTab.SYSTEM) }
         binding.fabUninstall.setOnClickListener {
-            val s = vm.state.value
-            if (s.selectedSystemCount > 0 && !s.privileged) connectPrivileged() else confirmUninstall()
+            val s = model.state
+            if (s.selectedSystemCount > 0 && !s.privileged) model.connectPrivileged() else confirmUninstall()
         }
 
-        onBackPressedDispatcher.addCallback(this, backCallback)
-        Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
-        Shizuku.addBinderReceivedListener(shizukuBinderListener)
+        // A rotation or dark-mode change recreates this screen, but the model (and so the selection) stays.
+        if (savedInstanceState == null) model.start()
+    }
 
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch { vm.state.collect { render(it) } }
-                launch { vm.events.collect { handleEvent(it) } }
-            }
-        }
+    override fun onStart() {
+        super.onStart()
+        model.listener = this // sends the current state right away
     }
 
     override fun onResume() {
         super.onResume()
-        refreshShizuku() // the user may just have started Shizuku or allowed this app in it
+        model.refreshShizuku() // the user may just have started Shizuku or allowed this app in it
+    }
+
+    override fun onStop() {
+        model.listener = null
+        super.onStop()
     }
 
     override fun onDestroy() {
-        Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
-        Shizuku.removeBinderReceivedListener(shizukuBinderListener)
         progressDialog?.dismiss()
         progressDialog = null
         super.onDestroy()
+    }
+
+    /** Back closes search first, then clears the selection, then leaves the app. */
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        when {
+            searchOpen -> setSearchOpen(false)
+            model.state.selectedCount > 0 -> model.clearSelection()
+            else -> super.onBackPressed()
+        }
+    }
+
+    /** Android's own uninstall dialog (the fallback without Shizuku/root) has closed. */
+    @Suppress("DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_UNINSTALL) model.onPromptResult()
     }
 
     // ---- setup ----------------------------------------------------------------------------------
@@ -112,19 +101,19 @@ class MainActivity : ComponentActivity() {
         // Right: search (a cross while open) next to sort. Left: a back arrow only while apps are
         // selected. So search and sort both stay usable with a selection.
         binding.btnSearch.setOnClickListener { setSearchOpen(!searchOpen) }
-        binding.btnBack.setOnClickListener { vm.clearSelection() }
+        binding.btnBack.setOnClickListener { model.clearSelection() }
         binding.btnSort.setOnClickListener { showSortDialog() }
         binding.etSearch.setOnEditorActionListener { _, _, _ ->
             imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
             true
         }
-        // After a rotation the box is rebuilt empty, but the view model still filters: restore it.
-        val restored = vm.state.value.query
+        // After a rotation the box is rebuilt empty, but the model still filters: restore it.
+        val restored = model.state.query
         if (restored.isNotEmpty()) {
             binding.etSearch.setText(restored)
             setSearchOpen(true, focus = false)
         }
-        binding.etSearch.doAfterTextChanged { vm.setQuery(it?.toString().orEmpty()) }
+        binding.etSearch.doAfterTextChanged { model.setQuery(it?.toString().orEmpty()) }
     }
 
     private fun setSearchOpen(open: Boolean, focus: Boolean = true) {
@@ -142,6 +131,11 @@ class MainActivity : ComponentActivity() {
             imm.hideSoftInputFromWindow(binding.etSearch.windowToken, 0)
         }
         updateTopBar()
+    }
+
+    private fun updateTopBar() {
+        binding.btnBack.isVisible = model.state.selectedCount > 0
+        binding.btnSearch.setImageResource(if (searchOpen) R.drawable.ic_close else R.drawable.ic_search)
     }
 
     /**
@@ -168,51 +162,44 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun updateTopBar() {
-        val selecting = vm.state.value.selectedCount > 0
-        backCallback.isEnabled = searchOpen || selecting
-        binding.btnBack.isVisible = selecting
-        binding.btnSearch.setImageResource(if (searchOpen) R.drawable.ic_close else R.drawable.ic_search)
-    }
-
     private fun setupList() {
-        adapter = AppInfoAdapter(this, lifecycleScope, vm.icons)
+        adapter = AppInfoAdapter(this, model.icons)
         val list = binding.listApps
         list.adapter = adapter
-        list.onRowTap = { position -> if (position < adapter.count) vm.toggle(adapter.getItem(position).app.packageName) }
+        list.onRowTap = { position -> if (position < adapter.count) model.toggle(adapter.getItem(position).app.packageName) }
         list.popupText = { adapter.popupText(it) }
 
         // Long pull needed, so scrolling back to the top does not refresh by accident.
         binding.swipe.setDistanceToTriggerSync((REFRESH_PULL_DP * resources.displayMetrics.density).toInt())
-        binding.swipe.setOnRefreshListener { vm.refresh() }
+        binding.swipe.setOnRefreshListener { model.refresh() }
     }
 
     // ---- rendering ------------------------------------------------------------------------------
 
-    private fun render(s: UiState) {
-        adapter.sortMode = s.sort
-        adapter.submit(s.rows)
-        if (s.scrollToTopToken != lastScrollToken) {
-            lastScrollToken = s.scrollToTopToken
+    override fun onState(state: UiState) {
+        adapter.sortMode = state.sort
+        adapter.submit(state.rows)
+        if (state.scrollToTopToken != lastScrollToken) {
+            lastScrollToken = state.scrollToTopToken
             binding.listApps.setSelection(0)
         }
-        binding.progressInitial.isVisible = s.loading
-        binding.tvEmpty.isVisible = !s.loading && s.rows.isEmpty()
-        binding.swipe.isRefreshing = s.refreshing
+        binding.progressInitial.isVisible = state.loading
+        binding.tvEmpty.isVisible = !state.loading && state.rows.isEmpty()
+        binding.swipe.isRefreshing = state.refreshing
 
-        for ((tab, active) in listOf(binding.tabUser to (s.tab == AppTab.USER), binding.tabSystem to (s.tab == AppTab.SYSTEM))) {
+        for ((tab, active) in listOf(binding.tabUser to (state.tab == AppTab.USER), binding.tabSystem to (state.tab == AppTab.SYSTEM))) {
             tab.isActivated = active // draws the underline (bg_tab)
             tab.alpha = if (active) 1f else 0.7f
         }
-        binding.tabUser.setIfChanged(getString(R.string.tab_user, s.userCount))
-        binding.tabSystem.setIfChanged(getString(R.string.tab_system, s.systemCount))
+        binding.tabUser.setIfChanged(getString(R.string.tab_user, state.userCount))
+        binding.tabSystem.setIfChanged(getString(R.string.tab_system, state.systemCount))
 
         binding.tvTitle.setIfChanged(
-            if (s.selectedCount > 0) getString(R.string.n_selected, s.selectedCount) else getString(R.string.app_name)
+            if (state.selectedCount > 0) getString(R.string.n_selected, state.selectedCount) else getString(R.string.app_name)
         )
         updateTopBar()
-        renderButton(s)
-        renderProgress(s.progress)
+        renderButton(state)
+        renderProgress(state.progress)
     }
 
     private fun TextView.setIfChanged(value: String) {
@@ -248,7 +235,7 @@ class MainActivity : ComponentActivity() {
                 .setTitle(R.string.uninstalling)
                 .setView(b.root)
                 .setCancelable(false)
-                .setNegativeButton(R.string.cancel) { _, _ -> vm.cancelUninstall() }
+                .setNegativeButton(R.string.cancel) { _, _ -> model.cancelUninstall() }
                 .setOnDismissListener {
                     progressDialog = null
                     progressBinding = null
@@ -286,18 +273,18 @@ class MainActivity : ComponentActivity() {
                 buttonDrawable = InsetDrawable(buttonDrawable, (24 * d).toInt(), 0, 0, 0)
                 setPaddingRelative((12 * d).toInt(), 0, (24 * d).toInt(), 0)
                 setOnClickListener {
-                    vm.setSort(SortMode.values()[index])
+                    model.setSort(SortMode.values()[index])
                     dialog?.dismiss()
                 }
             }
             group.addView(row, RadioGroup.LayoutParams(RadioGroup.LayoutParams.MATCH_PARENT, (44 * d).toInt()))
         }
-        group.check(vm.state.value.sort.ordinal + 1)
+        group.check(model.state.sort.ordinal + 1)
         dialog = builder.setTitle(R.string.sort).setView(group).show()
     }
 
     private fun confirmUninstall() {
-        val s = vm.state.value
+        val s = model.state
         if (s.selectedCount == 0) return
         val message = if (s.selectedSystemCount > 0) {
             getString(R.string.system_warning)
@@ -307,70 +294,15 @@ class MainActivity : ComponentActivity() {
         AlertDialog.Builder(this)
             .setTitle(resources.getQuantityString(R.plurals.uninstall_confirm_title, s.selectedCount, s.selectedCount))
             .setMessage(message)
-            .setPositiveButton(R.string.uninstall) { _, _ -> beginUninstall() }
+            .setPositiveButton(R.string.uninstall) { _, _ -> model.beginUninstall() }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    // ---- Shizuku / root -------------------------------------------------------------------------
+    // ---- events from the model ------------------------------------------------------------------
 
-    private fun beginUninstall() {
-        refreshShizuku()
-        if (!vm.state.value.privileged && shizukuRunning() && shizukuCanAsk()) {
-            // Ask once for silent uninstalling; the result listener continues from here.
-            uninstallAfterPermission = true
-            Shizuku.requestPermission(REQUEST_SHIZUKU)
-        } else {
-            vm.uninstallSelected()
-        }
-    }
-
-    /** "ROOT ACCESS" pressed: ask Shizuku for permission, else try root, else open the Shizuku app. */
-    private fun connectPrivileged() {
-        refreshShizuku()
-        if (vm.state.value.privileged) return
-        if (shizukuRunning()) {
-            if (shizukuCanAsk()) Shizuku.requestPermission(REQUEST_SHIZUKU) else toast(R.string.shizuku_denied)
-        } else {
-            vm.tryRoot()
-        }
-    }
-
-    private fun openShizuku() {
-        val launch = packageManager.getLaunchIntentForPackage(SHIZUKU_PACKAGE)
-        val intent = launch ?: Intent(Intent.ACTION_VIEW, Uri.parse(SHIZUKU_URL))
-        toast(if (launch != null) R.string.start_shizuku else R.string.no_shizuku)
-        try {
-            startActivity(intent)
-        } catch (e: ActivityNotFoundException) {
-            // nothing can open it; the message above already says what to do
-        }
-    }
-
-    private fun refreshShizuku() = vm.setShizukuReady(shizukuRunning() && shizukuPermitted())
-
-    private fun shizukuRunning() = try {
-        Shizuku.pingBinder() && !Shizuku.isPreV11()
-    } catch (e: Throwable) {
-        false
-    }
-
-    private fun shizukuPermitted() = try {
-        Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
-    } catch (e: Throwable) {
-        false
-    }
-
-    /** False once the user chose "deny and don't ask again". */
-    private fun shizukuCanAsk() = try {
-        !Shizuku.shouldShowRequestPermissionRationale()
-    } catch (e: Throwable) {
-        false
-    }
-
-    // ---- events ---------------------------------------------------------------------------------
-
-    private fun handleEvent(event: UiEvent) {
+    @Suppress("DEPRECATION") // startActivityForResult: the replacement needs a library this app does not use
+    override fun onEvent(event: UiEvent) {
         when (event) {
             is UiEvent.Message -> Toast.makeText(this, event.text, Toast.LENGTH_LONG).show()
             UiEvent.OpenShizuku -> openShizuku()
@@ -378,18 +310,27 @@ class MainActivity : ComponentActivity() {
                 val intent = Intent(Intent.ACTION_DELETE, Uri.parse("package:${event.packageName}"))
                     .putExtra(Intent.EXTRA_RETURN_RESULT, true)
                 try {
-                    uninstallLauncher.launch(intent)
+                    startActivityForResult(intent, REQUEST_UNINSTALL)
                 } catch (e: ActivityNotFoundException) {
-                    vm.onPromptResult()
+                    model.onPromptResult()
                 }
             }
         }
     }
 
-    private fun toast(res: Int) = Toast.makeText(this, res, Toast.LENGTH_LONG).show()
+    private fun openShizuku() {
+        val launch = packageManager.getLaunchIntentForPackage(SHIZUKU_PACKAGE)
+        val intent = launch ?: Intent(Intent.ACTION_VIEW, Uri.parse(SHIZUKU_URL))
+        Toast.makeText(this, if (launch != null) R.string.start_shizuku else R.string.no_shizuku, Toast.LENGTH_LONG).show()
+        try {
+            startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            // nothing can open it; the message above already says what to do
+        }
+    }
 
     private companion object {
-        const val REQUEST_SHIZUKU = 1001
+        const val REQUEST_UNINSTALL = 1
         const val REFRESH_PULL_DP = 140
         const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
         const val SHIZUKU_URL = "https://shizuku.rikka.app/download/"

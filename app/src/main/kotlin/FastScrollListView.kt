@@ -156,7 +156,7 @@ class FastScrollListView @JvmOverloads constructor(context: Context, attrs: Attr
                 downs.remove(id)
                 if (down != null && !dragging && ev.eventTime - down.time <= tapTimeout) {
                     val position = pointToPosition(down.x.toInt(), down.y.toInt())
-                    if (position >= 0) onRowTap(position)
+                    if (position >= 0) post { onRowTap(position) } // after this touch is fully handled
                 }
             }
             MotionEvent.ACTION_CANCEL -> downs.clear()

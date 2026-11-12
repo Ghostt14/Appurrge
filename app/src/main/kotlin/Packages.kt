@@ -8,37 +8,31 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.util.LruCache
 import androidx.core.graphics.drawable.toBitmap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Loading is split so something can be shown fast: [installedPackages] is one cheap query that
- * already carries install times, and [toApps] does the slow label lookups. The caller converts the
- * newest few first (what the default sort shows) and the rest afterwards. The finished list is also
- * cached on disk, so the next launch can show the list before PackageManager has answered.
+ * Loading is split so something can be shown fast: [installedPackages] is one cheap query that already
+ * carries install times, and [toApps] does the slow label lookups. The caller converts the newest few first
+ * (what the default sort shows) and the rest afterwards. The finished list is also cached on disk, so the
+ * next launch can show the list before PackageManager has answered.
+ *
+ * Everything here blocks, so call it from a background thread.
  */
 object PackageUtils {
     private const val WORKERS = 4
     private const val CACHE_FILE = "apps.cache"
 
     /** All packages, newest install first. */
-    suspend fun installedPackages(context: Context): List<PackageInfo> = withContext(Dispatchers.Default) {
+    fun installedPackages(context: Context): List<PackageInfo> =
         context.packageManager.getInstalledPackages(0).sortedByDescending { it.firstInstallTime }
-    }
 
-    /** Builds [AppInfo]s (label lookups are the slow part, so spread over a few threads); keeps order. */
-    suspend fun toApps(context: Context, packages: List<PackageInfo>): List<AppInfo> {
+    /** Builds [AppInfo]s with the work spread over a few threads; keeps the order. */
+    fun toApps(context: Context, packages: List<PackageInfo>): List<AppInfo> {
         if (packages.isEmpty()) return emptyList()
         val pm = context.packageManager
-        return withContext(Dispatchers.Default) {
-            packages.chunked((packages.size + WORKERS - 1) / WORKERS)
-                .map { chunk -> async { chunk.mapNotNull { toApp(pm, it) } } }
-                .awaitAll()
-                .flatten()
-        }
+        val chunkSize = (packages.size + WORKERS - 1) / WORKERS
+        val tasks = packages.chunked(chunkSize).map { chunk -> { chunk.mapNotNull { toApp(pm, it) } } }
+        return Work.parallel(tasks).flatten()
     }
 
     private fun toApp(pm: PackageManager, pi: PackageInfo): AppInfo? {
@@ -74,15 +68,13 @@ object PackageUtils {
 
     // ---- disk cache: one tab-separated line per app --------------------------------------------
 
-    suspend fun readCache(context: Context): List<AppInfo> = withContext(Dispatchers.IO) {
-        try {
-            File(context.filesDir, CACHE_FILE).useLines { lines -> lines.mapNotNull { parseLine(it) }.toList() }
-        } catch (e: Exception) {
-            emptyList()
-        }
+    fun readCache(context: Context): List<AppInfo> = try {
+        File(context.filesDir, CACHE_FILE).useLines { lines -> lines.mapNotNull { parseLine(it) }.toList() }
+    } catch (e: Exception) {
+        emptyList()
     }
 
-    suspend fun writeCache(context: Context, apps: List<AppInfo>) = withContext(Dispatchers.IO) {
+    fun writeCache(context: Context, apps: List<AppInfo>) {
         try {
             val tmp = File(context.filesDir, "$CACHE_FILE.tmp")
             tmp.writeText(apps.joinToString("\n") {
@@ -93,7 +85,6 @@ object PackageUtils {
         } catch (e: Exception) {
             // The cache is only a speed-up; ignore failures.
         }
-        Unit
     }
 
     private fun parseLine(line: String): AppInfo? {
@@ -115,11 +106,21 @@ class IconLoader(private val pm: PackageManager, private val sizePx: Int) {
 
     fun cached(packageName: String): Bitmap? = cache.get(packageName)
 
-    suspend fun load(packageName: String): Bitmap? = withContext(Dispatchers.IO) {
-        cache.get(packageName) ?: try {
-            pm.getApplicationIcon(packageName).toBitmap(sizePx, sizePx).also { cache.put(packageName, it) }
-        } catch (e: Exception) {
-            null
+    /**
+     * Loads the icon on a worker thread and hands it to [onLoaded] on the main thread. [wanted] is asked
+     * before the work starts and again before delivering, so a row that was reused for another app in the
+     * meantime neither does the work nor shows the wrong icon.
+     */
+    fun load(packageName: String, wanted: () -> Boolean, onLoaded: (Bitmap) -> Unit) {
+        Work.background {
+            if (wanted()) {
+                val bitmap = cache.get(packageName) ?: try {
+                    pm.getApplicationIcon(packageName).toBitmap(sizePx, sizePx).also { cache.put(packageName, it) }
+                } catch (e: Exception) {
+                    null
+                }
+                if (bitmap != null) Work.ui { if (wanted()) onLoaded(bitmap) }
+            }
         }
     }
 }

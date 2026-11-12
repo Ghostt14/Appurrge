@@ -9,9 +9,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
 import com.appurrge.databinding.AppListItemBinding
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -19,7 +16,6 @@ import java.util.Locale
 /** Adapter for the plain ListView. Also supplies the scroll-bar popup text. */
 class AppInfoAdapter(
     private val context: Context,
-    private val scope: CoroutineScope,
     private val icons: IconLoader
 ) : BaseAdapter() {
 
@@ -33,8 +29,10 @@ class AppInfoAdapter(
         DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMyyyy"), Locale.getDefault()
     )
 
+    /** A row is reused for different apps while scrolling, so it remembers which app it shows now. */
     private class Holder(val binding: AppListItemBinding) {
-        var iconJob: Job? = null
+        @Volatile
+        var packageName = ""
     }
 
     fun submit(newRows: List<Row>) {
@@ -57,14 +55,13 @@ class AppInfoAdapter(
         b.tvDetails.text = dayFormat.format(Date(app.installTime)) + " · " + Formatter.formatShortFileSize(context, app.size)
         b.root.isActivated = row.selected
 
-        holder.iconJob?.cancel()
+        holder.packageName = app.packageName
         val cached = icons.cached(app.packageName)
         if (cached != null) {
-            holder.iconJob = null
             b.imgIcon.setImageBitmap(cached)
         } else {
             b.imgIcon.setImageResource(android.R.drawable.sym_def_app_icon)
-            holder.iconJob = scope.launch { icons.load(app.packageName)?.let { b.imgIcon.setImageBitmap(it) } }
+            icons.load(app.packageName, wanted = { holder.packageName == app.packageName }) { b.imgIcon.setImageBitmap(it) }
         }
         return b.root
     }
