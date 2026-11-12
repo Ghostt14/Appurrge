@@ -11,13 +11,18 @@ import java.util.concurrent.TimeUnit
 /**
  * All the threading the app needs, in one place and without coroutines:
  *  - [ui]: get back to the main thread. Everything that touches the screen or [AppModel] runs there.
- *  - [background] and [parallel]: a small pool for short jobs (app labels, icons).
+ *  - [background]: a pool for the many small icon jobs while scrolling.
+ *  - [parallel]: a second pool for reading app labels while the list loads. It is separate on purpose, so
+ *    loading the list never waits behind icon jobs (and icons never wait behind it).
  *  - [thread]: a thread of its own for long, rare jobs (loading the list, a batch uninstall).
  */
 object Work {
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val pool = ThreadPoolExecutor(4, 4, 10, TimeUnit.SECONDS, LinkedBlockingQueue<Runnable>())
+    private fun pool(threads: Int) = ThreadPoolExecutor(threads, threads, 10, TimeUnit.SECONDS, LinkedBlockingQueue<Runnable>())
         .apply { allowCoreThreadTimeOut(true) }
+
+    private val iconPool = pool(8)
+    private val labelPool = pool(4)
 
     /** Runs [block] on the main thread: right away if already there, otherwise as soon as it is free. */
     fun ui(block: () -> Unit) {
@@ -25,12 +30,12 @@ object Work {
     }
 
     fun background(block: () -> Unit) {
-        pool.execute { block() }
+        iconPool.execute { block() }
     }
 
-    /** Runs [tasks] on the pool at the same time and returns their results in order. Not for the main thread. */
+    /** Runs [tasks] at the same time on the label pool and returns their results in order. Not for the main thread. */
     fun <T> parallel(tasks: List<() -> T>): List<T> =
-        pool.invokeAll(tasks.map { task -> Callable { task() } }).map { it.get() }
+        labelPool.invokeAll(tasks.map { task -> Callable { task() } }).map { it.get() }
 
     fun thread(block: () -> Unit) {
         Thread { block() }.start()

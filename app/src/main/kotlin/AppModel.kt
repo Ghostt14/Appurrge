@@ -51,6 +51,9 @@ class AppModel private constructor(private val app: Context) {
     private var currentPrompt: String? = null
 
     init {
+        // Loads the sorting rules now, on another thread, so the first list build on the main thread is not slowed.
+        Work.background { AppListLogic.warmUp() }
+
         // Registered once for the whole process, so the Activity never has to add or remove them.
         try {
             Shizuku.addBinderReceivedListener { Work.ui { refreshShizuku() } }

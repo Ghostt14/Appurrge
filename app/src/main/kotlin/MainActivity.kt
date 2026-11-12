@@ -40,6 +40,9 @@ class MainActivity : Activity(), AppModel.Listener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         model = AppModel.get(this)
+        // A rotation or dark-mode change recreates this screen, but the model (and so the selection) stays.
+        // On a fresh launch, start loading now so it overlaps with building the layout.
+        if (savedInstanceState == null) model.start()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -52,9 +55,6 @@ class MainActivity : Activity(), AppModel.Listener {
             val s = model.state
             if (s.selectedSystemCount > 0 && !s.privileged) model.connectPrivileged() else confirmUninstall()
         }
-
-        // A rotation or dark-mode change recreates this screen, but the model (and so the selection) stays.
-        if (savedInstanceState == null) model.start()
     }
 
     override fun onStart() {
